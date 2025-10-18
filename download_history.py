@@ -108,6 +108,38 @@ class DownloadHistoryManager:
             size_bytes /= 1024.0
         return f"{size_bytes:.2f} PB"
     
+    def _remove_duplicates(self, downloads: List[Dict]) -> List[Dict]:
+        """
+        ダウンロード履歴から重複を除去（model_id + version_idで判定）
+        
+        Args:
+            downloads: ダウンロード履歴のリスト
+            
+        Returns:
+            List[Dict]: 重複除去されたダウンロード履歴のリスト
+        """
+        seen = set()
+        unique_downloads = []
+        
+        for download in downloads:
+            model_id = download.get('model_id', '')
+            version_id = download.get('version_id', '')
+            
+            # model_id + version_idの組み合わせで一意性を判定
+            key = f"{model_id}_{version_id}"
+            
+            if key not in seen and model_id and version_id:
+                seen.add(key)
+                unique_downloads.append(download)
+            elif not model_id or not version_id:
+                # model_idやversion_idが空の場合はURLで判定
+                url = download.get('url', '')
+                if url and url not in seen:
+                    seen.add(url)
+                    unique_downloads.append(download)
+        
+        return unique_downloads
+    
     def get_recent_downloads(self, count: int = 10) -> List[Dict]:
         """
         最近のダウンロード履歴を取得（CSV形式）
@@ -132,9 +164,12 @@ class DownloadHistoryManager:
             print(f"履歴の読み込みに失敗: {str(e)}")
             return []
     
-    def get_all_downloads(self) -> List[Dict]:
+    def get_all_downloads(self, remove_duplicates: bool = True) -> List[Dict]:
         """
         全てのダウンロード履歴を取得
+        
+        Args:
+            remove_duplicates: 重複を除去するかどうか
         
         Returns:
             List[Dict]: 全てのダウンロード履歴のリスト
@@ -145,7 +180,11 @@ class DownloadHistoryManager:
         try:
             with open(self.history_file, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
-                return list(reader)
+                downloads = list(reader)
+            
+            if remove_duplicates:
+                return self._remove_duplicates(downloads)
+            return downloads
         except Exception as e:
             print(f"履歴の読み込みに失敗: {str(e)}")
             return []
@@ -173,8 +212,26 @@ class DownloadHistoryManager:
         Returns:
             bool: ダウンロード済みの場合True
         """
-        all_downloads = self.get_all_downloads()
+        all_downloads = self.get_all_downloads(remove_duplicates=False)
         return any(download.get('url') == url for download in all_downloads)
+    
+    def check_model_downloaded(self, model_id: int, version_id: int) -> bool:
+        """
+        モデル（model_id + version_id）が既にダウンロード済みかチェック
+        
+        Args:
+            model_id: モデルID
+            version_id: バージョンID
+            
+        Returns:
+            bool: ダウンロード済みの場合True
+        """
+        all_downloads = self.get_all_downloads(remove_duplicates=False)
+        for download in all_downloads:
+            if (download.get('model_id') == str(model_id) and 
+                download.get('version_id') == str(version_id)):
+                return True
+        return False
     
     def get_download_info(self, url: str) -> Optional[Dict]:
         """
@@ -209,6 +266,55 @@ class DownloadHistoryManager:
             }
             for download in all_downloads
         ]
+    
+    def clean_duplicates(self) -> int:
+        """
+        履歴ファイルから重複を除去して新しいファイルに保存
+        
+        Returns:
+            int: 除去された重複の数
+        """
+        if not os.path.exists(self.history_file):
+            return 0
+        
+        try:
+            # 元の履歴を読み込み
+            with open(self.history_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                original_downloads = list(reader)
+            
+            # 重複除去
+            unique_downloads = self._remove_duplicates(original_downloads)
+            
+            # 重複数計算
+            duplicates_removed = len(original_downloads) - len(unique_downloads)
+            
+            if duplicates_removed > 0:
+                # バックアップファイル作成
+                backup_file = self.history_file + '.backup'
+                with open(backup_file, 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(self.CSV_HEADERS)
+                    for download in original_downloads:
+                        writer.writerow([download.get(header, '') for header in self.CSV_HEADERS])
+                
+                # 新しいファイルに書き込み
+                with open(self.history_file, 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(self.CSV_HEADERS)
+                    for download in unique_downloads:
+                        writer.writerow([download.get(header, '') for header in self.CSV_HEADERS])
+                
+                print(f"✅ 重複除去完了: {duplicates_removed}件の重複を除去")
+                print(f"📁 バックアップファイル: {backup_file}")
+            else:
+                print("✅ 重複は見つかりませんでした")
+            
+            return duplicates_removed
+            
+        except Exception as e:
+            print(f"❌ 重複除去に失敗: {str(e)}")
+            return 0
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ import aiohttp
 import os
 import sys
 import argparse
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple, List
 from datetime import datetime
 import time
 
@@ -348,6 +348,71 @@ class CivitaiDownloader:
         return True, None, download_info
 
 
+async def redownload_all(downloads: List[Dict], config: ConfigManager, force: bool = False):
+    """
+    全件再ダウンロードを実行
+    
+    Args:
+        downloads: ダウンロード履歴のリスト
+        config: 設定マネージャー
+        force: 強制上書きフラグ
+    """
+    total = len(downloads)
+    success_count = 0
+    error_count = 0
+    
+    print(f"\n🚀 全件ダウンロード開始: {total}件")
+    print(f"{'='*60}")
+    
+    async with CivitaiDownloader(config) as downloader:
+        for i, download in enumerate(downloads, 1):
+            url = download.get('url')
+            model_type = download.get('model_type')
+            filename = download.get('filename')
+            
+            print(f"\n📥 [{i}/{total}] {filename}")
+            print(f"🔗 URL: {url}")
+            print(f"📂 Type: {model_type}")
+            print(f"{'-'*40}")
+            
+            try:
+                # 重複チェック（forceがFalseの場合のみ）
+                if not force:
+                    # URLを解析してmodel_idとversion_idを取得
+                    try:
+                        model_id, version_id = CivitaiURLParser.parse_url(url)
+                        # 履歴マネージャーを取得
+                        history_manager = DownloadHistoryManager(config.get_history_file())
+                        model_duplicate = history_manager.check_model_downloaded(model_id, version_id)
+                        if model_duplicate:
+                            print(f"⚠️  スキップ: 既にダウンロード済み")
+                            continue
+                    except ValueError:
+                        pass
+                
+                # ダウンロード実行
+                success, error, download_info = await downloader.download_model(url, model_type)
+                
+                if success:
+                    print(f"✅ 成功: {filename}")
+                    success_count += 1
+                else:
+                    print(f"❌ 失敗: {error}")
+                    error_count += 1
+                    
+            except Exception as e:
+                print(f"❌ エラー: {str(e)}")
+                error_count += 1
+    
+    # 結果サマリー
+    print(f"\n{'='*60}")
+    print(f"🎉 全件ダウンロード完了!")
+    print(f"{'='*60}")
+    print(f"✅ 成功: {success_count}件")
+    print(f"❌ 失敗: {error_count}件")
+    print(f"📊 合計: {total}件")
+
+
 async def main():
     """メイン処理"""
     parser = argparse.ArgumentParser(
@@ -393,13 +458,21 @@ async def main():
     
     parser.add_argument(
         '--redownload-url',
-        help='指定されたURLを再ダウンロード（履歴から自動検出）'
+        nargs='?',
+        const='all',
+        help='指定されたURLを再ダウンロード（履歴から自動検出）。引数なしの場合は全件ダウンロード'
     )
     
     parser.add_argument(
         '--force',
         action='store_true',
         help='既存ファイルの上書きを強制（確認なし）'
+    )
+    
+    parser.add_argument(
+        '--clean-duplicates',
+        action='store_true',
+        help='履歴ファイルから重複を除去'
     )
     
     args = parser.parse_args()
@@ -416,16 +489,32 @@ async def main():
         # 履歴マネージャー初期化
         history_manager = DownloadHistoryManager(config.get_history_file())
         
+        # 重複除去
+        if args.clean_duplicates:
+            print(f"\n{'='*60}")
+            print(f"🧹 履歴の重複除去")
+            print(f"{'='*60}")
+            
+            duplicates_removed = history_manager.clean_duplicates()
+            if duplicates_removed > 0:
+                print(f"✅ {duplicates_removed}件の重複を除去しました")
+            else:
+                print("✅ 重複は見つかりませんでした")
+            sys.exit(0)
+        
         # 履歴表示
         if args.list_history:
             print(f"\n{'='*60}")
             print(f"📋 ダウンロード履歴")
             print(f"{'='*60}")
             
-            downloads = history_manager.get_all_downloads()
+            downloads = history_manager.get_all_downloads(remove_duplicates=True)
             if not downloads:
                 print("履歴がありません")
                 sys.exit(0)
+            
+            print(f"📊 表示件数: {len(downloads)}件（重複除去済み）")
+            print()
             
             for i, download in enumerate(downloads, 1):
                 print(f"{i:2d}. [{download.get('timestamp', 'Unknown')}]")
@@ -436,11 +525,12 @@ async def main():
                 print()
             
             print(f"💡 再ダウンロード: --redownload <INDEX> または --redownload-url <URL>")
+            print(f"💡 重複除去: --clean-duplicates")
             sys.exit(0)
         
         # 再ダウンロード（インデックス指定）
         if args.redownload is not None:
-            downloads = history_manager.get_all_downloads()
+            downloads = history_manager.get_all_downloads(remove_duplicates=True)
             if not downloads:
                 print("❌ 履歴がありません")
                 sys.exit(1)
@@ -462,20 +552,70 @@ async def main():
         
         # 再ダウンロード（URL指定）
         elif args.redownload_url:
-            download_info = history_manager.get_download_info(args.redownload_url)
-            if not download_info:
-                print(f"❌ 履歴にURLが見つかりません: {args.redownload_url}")
-                sys.exit(1)
-            
-            url = download_info.get('url')
-            model_type = download_info.get('model_type')
-            
-            print(f"🔄 再ダウンロード: {url}")
-            print(f"📂 Type: {model_type}")
-            
-            # 通常のダウンロード処理に移行
-            args.url = url
-            args.type = model_type
+            if args.redownload_url == 'all':
+                # 全件ダウンロード
+                print(f"\n{'='*60}")
+                print(f"🔄 全件再ダウンロード")
+                print(f"{'='*60}")
+                
+                downloads = history_manager.get_all_downloads(remove_duplicates=True)
+                if not downloads:
+                    print("❌ 履歴がありません")
+                    sys.exit(1)
+                
+                print(f"📊 ダウンロード対象: {len(downloads)}件")
+                
+                # 確認
+                if not args.force:
+                    choice = input("全件ダウンロードを実行しますか？ (y/N): ")
+                    if choice.lower() != 'y':
+                        print("キャンセルしました")
+                        sys.exit(0)
+                
+                # 全件ダウンロード実行
+                await redownload_all(downloads, config, args.force)
+                sys.exit(0)
+            else:
+                # 引数が数値かどうかチェック
+                try:
+                    index = int(args.redownload_url)
+                    # 数値の場合はインデックス指定として処理
+                    downloads = history_manager.get_all_downloads(remove_duplicates=True)
+                    if not downloads:
+                        print("❌ 履歴がありません")
+                        sys.exit(1)
+                    
+                    if index < 1 or index > len(downloads):
+                        print(f"❌ 無効なインデックス: {index} (1-{len(downloads)})")
+                        sys.exit(1)
+                    
+                    download = downloads[index - 1]
+                    url = download.get('url')
+                    model_type = download.get('model_type')
+                    
+                    print(f"🔄 再ダウンロード: {url}")
+                    print(f"📂 Type: {model_type}")
+                    
+                    # 通常のダウンロード処理に移行
+                    args.url = url
+                    args.type = model_type
+                    
+                except ValueError:
+                    # 数値でない場合はURLとして処理
+                    download_info = history_manager.get_download_info(args.redownload_url)
+                    if not download_info:
+                        print(f"❌ 履歴にURLが見つかりません: {args.redownload_url}")
+                        sys.exit(1)
+                    
+                    url = download_info.get('url')
+                    model_type = download_info.get('model_type')
+                    
+                    print(f"🔄 再ダウンロード: {url}")
+                    print(f"📂 Type: {model_type}")
+                    
+                    # 通常のダウンロード処理に移行
+                    args.url = url
+                    args.type = model_type
         
         # URLとtypeが指定されていない場合はエラー
         if not args.url or not args.type:
@@ -484,9 +624,22 @@ async def main():
             print("💡 再ダウンロード: --redownload <INDEX> または --redownload-url <URL>")
             sys.exit(1)
         
-        # 重複チェック
-        if history_manager.check_url_downloaded(args.url) and not args.force:
-            print(f"⚠️  このURLは既にダウンロード済みです: {args.url}")
+        # 重複チェック（URLとmodel_id+version_idの両方でチェック）
+        url_duplicate = history_manager.check_url_downloaded(args.url)
+        
+        # URLを解析してmodel_idとversion_idを取得
+        try:
+            model_id, version_id = CivitaiURLParser.parse_url(args.url)
+            model_duplicate = history_manager.check_model_downloaded(model_id, version_id)
+        except ValueError:
+            model_duplicate = False
+        
+        if (url_duplicate or model_duplicate) and not args.force:
+            print(f"⚠️  このモデルは既にダウンロード済みです:")
+            if url_duplicate:
+                print(f"   URL: {args.url}")
+            if model_duplicate:
+                print(f"   Model ID: {model_id}, Version ID: {version_id}")
             choice = input("続行しますか？ (y/N): ")
             if choice.lower() != 'y':
                 print("キャンセルしました")
