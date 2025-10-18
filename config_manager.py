@@ -69,7 +69,7 @@ class ConfigManager:
         指定されたモデルタイプのダウンロードパスを取得
         
         Args:
-            model_type: モデルタイプ ('lora', 'checkpoints', 'embedding')
+            model_type: モデルタイプ ('lora', 'checkpoint', 'embedding')
             
         Returns:
             str: ダウンロードパス
@@ -119,7 +119,7 @@ class ConfigManager:
             self.get_api_key()
             
             # ダウンロードパスのチェック
-            for model_type in ['lora', 'checkpoints', 'embedding']:
+            for model_type in ['lora', 'checkpoint', 'embedding']:
                 self.get_download_path(model_type)
             
             # 履歴ファイルのチェック

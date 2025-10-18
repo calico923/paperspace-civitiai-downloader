@@ -55,12 +55,12 @@ class CivitaiURLParser:
         モデルタイプが有効かチェック
         
         Args:
-            model_type: モデルタイプ ('lora', 'checkpoints', 'embedding')
+            model_type: モデルタイプ ('lora', 'checkpoint', 'embedding')
             
         Returns:
             bool: 有効な場合True
         """
-        valid_types = ['lora', 'checkpoints', 'embedding']
+        valid_types = ['lora', 'checkpoint', 'embedding']
         return model_type.lower() in valid_types
 
 

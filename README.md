@@ -37,7 +37,7 @@ cp config.json.example config.json
   "civitai_api_key": "your_actual_api_key_here",
   "download_paths": {
     "lora": "./downloads/loras",
-    "checkpoints": "./downloads/checkpoints",
+    "checkpoint": "./downloads/checkpoints",
     "embedding": "./downloads/embeddings"
   },
   "download_history_file": "./download_history.csv"
@@ -61,7 +61,7 @@ python downloader.py -u "URL" -t "TYPE"
 
 **パラメータ:**
 - `-u, --url`: Civitai モデルURL（必須）
-- `-t, --type`: モデルタイプ `lora`, `checkpoints`, `embedding`（必須）
+- `-t, --type`: モデルタイプ `lora`, `checkpoint`, `embedding`（必須）
 - `-c, --config`: 設定ファイルのパス（オプション、デフォルト: `config.json`）
 - `--list-history`: ダウンロード履歴を表示
 - `--redownload INDEX`: 履歴から指定インデックスのアイテムを再ダウンロード
@@ -85,7 +85,7 @@ python downloader.py -u "https://civitai.com/models/649516?modelVersionId=726676
 
 #### Checkpointモデルをダウンロード
 ```bash
-  python downloader.py -u "https://civitai.com/models/123456" -t checkpoints
+  python downloader.py -u "https://civitai.com/models/123456" -t checkpoint
 ```
 
 #### Embeddingモデルをダウンロード
