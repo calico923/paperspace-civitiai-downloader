@@ -17,6 +17,7 @@ import time
 from url_parser import CivitaiURLParser
 from config_manager import ConfigManager
 from download_history import DownloadHistoryManager
+from model_type_classifier import ModelTypeClassifier
 
 
 class CivitaiDownloader:
@@ -34,6 +35,7 @@ class CivitaiDownloader:
         self.base_url = "https://civitai.com/api/v1"
         self.session: Optional[aiohttp.ClientSession] = None
         self.chunk_size = 4 * 1024 * 1024  # 4MB chunks
+        self.type_classifier = ModelTypeClassifier()
     
     async def __aenter__(self):
         """非同期コンテキストマネージャーのエントリー"""
@@ -258,14 +260,14 @@ class CivitaiDownloader:
     async def download_model(
         self,
         url: str,
-        model_type: str
+        model_type: Optional[str] = None
     ) -> Tuple[bool, Optional[str], Optional[Dict]]:
         """
         モデルをダウンロード
         
         Args:
             url: Civitai URL
-            model_type: モデルタイプ ('lora', 'checkpoint', 'embedding')
+            model_type: モデルタイプ ('lora', 'checkpoint', 'embedding') - Noneの場合は自動判定
             
         Returns:
             Tuple[bool, Optional[str], Optional[Dict]]: (成功/失敗, エラーメッセージ, ダウンロード情報)
@@ -274,7 +276,7 @@ class CivitaiDownloader:
         print(f"🚀 Civitai Model Downloader")
         print(f"{'='*60}")
         print(f"📍 URL: {url}")
-        print(f"📂 Type: {model_type}")
+        print(f"📂 Type: {model_type or '自動判定'}")
         print(f"{'='*60}\n")
         
         # URLを解析
@@ -291,19 +293,31 @@ class CivitaiDownloader:
         if not version_info:
             return False, "モデル情報の取得に失敗しました", None
         
-        # モデルタイプの検証
-        actual_type = version_info.get('model', {}).get('type', '').lower()
-        
-        # モデルタイプのマッピング
-        type_mapping = {
-            'lora': ['lora', 'locon', 'loha'],
-            'checkpoint': ['checkpoint'],
-            'embedding': ['textualinversion']
-        }
-        
-        valid_types = type_mapping.get(model_type, [])
-        if actual_type not in valid_types:
-            return False, f"モデルタイプが一致しません。期待: {model_type}, 実際: {actual_type}", None
+        # モデルタイプの自動判定または検証
+        if model_type is None:
+            # 自動判定
+            print(f"🤖 モデルタイプを自動判定中...")
+            detected_type, reason = self.type_classifier.classify_from_metadata(version_info)
+            
+            if detected_type is None:
+                return False, f"モデルタイプの自動判定に失敗: {reason}", None
+            
+            model_type = detected_type
+            print(f"✅ 自動判定結果: {model_type} ({reason})")
+        else:
+            # 手動指定されたタイプの検証
+            actual_type = version_info.get('model', {}).get('type', '').lower()
+            
+            # モデルタイプのマッピング
+            type_mapping = {
+                'lora': ['lora', 'locon', 'loha'],
+                'checkpoint': ['checkpoint'],
+                'embedding': ['textualinversion']
+            }
+            
+            valid_types = type_mapping.get(model_type, [])
+            if actual_type not in valid_types:
+                return False, f"モデルタイプが一致しません。期待: {model_type}, 実際: {actual_type}", None
         
         print(f"✅ モデル名: {version_info.get('name', 'Unknown')}")
         print(f"✅ ベースモデル: {version_info.get('baseModel', 'Unknown')}")
@@ -420,9 +434,11 @@ async def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 使用例:
-  python downloader.py -u "https://civitai.com/models/649516?modelVersionId=726676" -t lora
+  python downloader.py -u "https://civitai.com/models/649516?modelVersionId=726676"  # 自動判定
+  python downloader.py -u "https://civitai.com/models/649516?modelVersionId=726676" -t lora  # 手動指定
   python downloader.py -u "https://civitai.com/models/123456" -t checkpoint
   python downloader.py -u "https://civitai.com/models/789012" -t embedding -c custom_config.json
+  python downloader.py -u "https://civitai.com/models/123456" -y  # 非対話型（ipynb対応）
         '''
     )
     
@@ -434,7 +450,7 @@ async def main():
     parser.add_argument(
         '-t', '--type',
         choices=['lora', 'checkpoint', 'embedding'],
-        help='モデルタイプ'
+        help='モデルタイプ（指定しない場合は自動判定）'
     )
     
     parser.add_argument(
@@ -467,6 +483,12 @@ async def main():
         '--force',
         action='store_true',
         help='既存ファイルの上書きを強制（確認なし）'
+    )
+    
+    parser.add_argument(
+        '-y', '--yes',
+        action='store_true',
+        help='すべての確認をスキップ（非対話型モード）'
     )
     
     parser.add_argument(
@@ -566,7 +588,7 @@ async def main():
                 print(f"📊 ダウンロード対象: {len(downloads)}件")
                 
                 # 確認
-                if not args.force:
+                if not args.force and not args.yes:
                     choice = input("全件ダウンロードを実行しますか？ (y/N): ")
                     if choice.lower() != 'y':
                         print("キャンセルしました")
@@ -617,11 +639,12 @@ async def main():
                     args.url = url
                     args.type = model_type
         
-        # URLとtypeが指定されていない場合はエラー
-        if not args.url or not args.type:
-            print("❌ URLとtypeを指定してください")
+        # URLが指定されていない場合はエラー
+        if not args.url:
+            print("❌ URLを指定してください")
             print("💡 履歴表示: --list-history")
             print("💡 再ダウンロード: --redownload <INDEX> または --redownload-url <URL>")
+            print("💡 モデルタイプは自動判定されます（-t で手動指定も可能）")
             sys.exit(1)
         
         # 重複チェック（URLとmodel_id+version_idの両方でチェック）
@@ -634,7 +657,7 @@ async def main():
         except ValueError:
             model_duplicate = False
         
-        if (url_duplicate or model_duplicate) and not args.force:
+        if (url_duplicate or model_duplicate) and not args.force and not args.yes:
             print(f"⚠️  このモデルは既にダウンロード済みです:")
             if url_duplicate:
                 print(f"   URL: {args.url}")
