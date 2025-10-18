@@ -265,7 +265,7 @@ class CivitaiDownloader:
         
         Args:
             url: Civitai URL
-            model_type: モデルタイプ ('lora', 'checkpoint', 'embedding')
+            model_type: モデルタイプ ('lora', 'checkpoints', 'embedding')
             
         Returns:
             Tuple[bool, Optional[str], Optional[Dict]]: (成功/失敗, エラーメッセージ, ダウンロード情報)
@@ -297,7 +297,7 @@ class CivitaiDownloader:
         # モデルタイプのマッピング
         type_mapping = {
             'lora': ['lora', 'locon', 'loha'],
-            'checkpoint': ['checkpoint'],
+            'checkpoints': ['checkpoint'],
             'embedding': ['textualinversion']
         }
         
@@ -368,7 +368,7 @@ async def main():
     
     parser.add_argument(
         '-t', '--type',
-        choices=['lora', 'checkpoint', 'embedding'],
+        choices=['lora', 'checkpoints', 'embedding'],
         help='モデルタイプ'
     )
     
