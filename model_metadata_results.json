@@ -1,0 +1,22 @@
+[
+  {
+    "file_name": "waiIllustriousSDXL_v150.safetensors",
+    "file_path": "./downloads/checkpoints/waiIllustriousSDXL_v150.safetensors",
+    "file_size": 6938040682,
+    "sha256": "befc694a296f75e996488ebf9f9db8a1493bd059b6e704b975829e87d5aeb4fa",
+    "model_type": "checkpoint",
+    "base_model": "SDXL",
+    "civitai_url": null,
+    "download_urls": [],
+    "model_id": null,
+    "version_id": null,
+    "model_name": null,
+    "description": "<p>A</p>",
+    "tags": [
+      "base model"
+    ],
+    "creator": null,
+    "nsfw_level": 0,
+    "from_civitai": true
+  }
+]
