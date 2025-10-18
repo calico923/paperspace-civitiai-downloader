@@ -133,9 +133,19 @@ class ModelMetadataScanner:
             return ""
     
     def _detect_model_type(self, file_path: str, file_name: str) -> str:
-        """ファイル名からモデルタイプを判定"""
+        """ファイル名とディレクトリ構造からモデルタイプを判定"""
         file_name_lower = file_name.lower()
+        file_path_lower = file_path.lower()
         
+        # まずディレクトリ構造から判定
+        if '/loras/' in file_path_lower or '\\loras\\' in file_path_lower:
+            return "lora"
+        elif '/checkpoints/' in file_path_lower or '\\checkpoints\\' in file_path_lower:
+            return "checkpoint"
+        elif '/embeddings/' in file_path_lower or '\\embeddings\\' in file_path_lower:
+            return "embedding"
+        
+        # ディレクトリ構造で判定できない場合はファイル名から判定
         for model_type, keywords in self.model_type_keywords.items():
             for keyword in keywords:
                 if keyword in file_name_lower:
@@ -411,8 +421,8 @@ class ModelMetadataScanner:
                     metadata.nsfw_level = model_info.get('nsfw', 0)
                     metadata.version_id = model_info.get('id')
                     
-                    if metadata.model_id:
-                        metadata.civitai_url = f"https://civitai.com/models/{metadata.model_id}"
+                    if metadata.model_id and metadata.version_id:
+                        metadata.civitai_url = f"https://civitai.com/models/{metadata.model_id}?modelVersionId={metadata.version_id}"
                     
                     # ダウンロードURLを抽出
                     metadata.download_urls = self._extract_download_urls(model_info)
@@ -544,6 +554,122 @@ class ModelMetadataScanner:
         except Exception as e:
             logger.error(f"メタデータ読み込みエラー: {e}")
             return []
+    
+    def save_to_download_history_csv(self, metadata_list: List[ModelMetadata], output_path: str):
+        """メタデータをdownload_history.csv形式で保存"""
+        try:
+            import csv
+            from datetime import datetime
+            
+            with open(output_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                
+                # ヘッダー行
+                writer.writerow([
+                    'timestamp', 'model_type', 'url', 'filename', 'model_id', 
+                    'version_id', 'file_size', 'file_size_bytes'
+                ])
+                
+                # データ行
+                for metadata in metadata_list:
+                    if metadata.download_urls:
+                        for download_url in metadata.download_urls:
+                            # ファイルサイズをGBとバイトで表示
+                            file_size_gb = metadata.file_size / (1024**3)
+                            file_size_str = f"{file_size_gb:.2f} GB"
+                            
+                            # Civitai URLを取得（model_idとversion_idがある場合は正しいURL形式で生成）
+                            if metadata.civitai_url:
+                                civitai_url = metadata.civitai_url
+                            elif metadata.model_id and metadata.version_id:
+                                civitai_url = f"https://civitai.com/models/{metadata.model_id}?modelVersionId={metadata.version_id}"
+                            else:
+                                civitai_url = download_url
+                            
+                            writer.writerow([
+                                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                                metadata.model_type,
+                                civitai_url,
+                                metadata.file_name,
+                                metadata.model_id or '',
+                                metadata.version_id or '',
+                                file_size_str,
+                                str(metadata.file_size)
+                            ])
+            
+            logger.info(f"ダウンロード履歴をCSV形式で保存しました: {output_path}")
+        
+        except Exception as e:
+            logger.error(f"CSV保存エラー: {e}")
+    
+    def extract_download_urls_for_csv(self, metadata_list: List[ModelMetadata]) -> List[Dict]:
+        """CSV出力用のダウンロードURL情報を抽出（download_history.csv形式）"""
+        download_entries = []
+        
+        for metadata in metadata_list:
+            if metadata.download_urls:
+                for download_url in metadata.download_urls:
+                    # ファイルサイズをGBとバイトで表示
+                    file_size_gb = metadata.file_size / (1024**3)
+                    file_size_str = f"{file_size_gb:.2f} GB"
+                    
+                    # Civitai URLを取得（model_idとversion_idがある場合は正しいURL形式で生成）
+                    if metadata.civitai_url:
+                        civitai_url = metadata.civitai_url
+                    elif metadata.model_id and metadata.version_id:
+                        civitai_url = f"https://civitai.com/models/{metadata.model_id}?modelVersionId={metadata.version_id}"
+                    else:
+                        civitai_url = download_url
+                    
+                    entry = {
+                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'model_type': metadata.model_type,
+                        'url': civitai_url,
+                        'filename': metadata.file_name,
+                        'model_id': metadata.model_id or '',
+                        'version_id': metadata.version_id or '',
+                        'file_size': file_size_str,
+                        'file_size_bytes': str(metadata.file_size)
+                    }
+                    download_entries.append(entry)
+        
+        return download_entries
+    
+    def extract_detailed_metadata_for_csv(self, metadata_list: List[ModelMetadata]) -> List[Dict]:
+        """詳細メタデータをCSV出力用に抽出（拡張フィールド付き）"""
+        detailed_entries = []
+        
+        for metadata in metadata_list:
+            if metadata.download_urls:
+                for download_url in metadata.download_urls:
+                    # ファイルサイズをGBとバイトで表示
+                    file_size_gb = metadata.file_size / (1024**3)
+                    file_size_str = f"{file_size_gb:.2f} GB"
+                    
+                    # Civitai URLを取得（model_idがある場合）
+                    civitai_url = metadata.civitai_url or download_url
+                    
+                    entry = {
+                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'model_type': metadata.model_type,
+                        'url': civitai_url,
+                        'filename': metadata.file_name,
+                        'model_id': metadata.model_id or '',
+                        'version_id': metadata.version_id or '',
+                        'file_size': file_size_str,
+                        'file_size_bytes': str(metadata.file_size),
+                        'model_name': metadata.model_name or '',
+                        'creator': metadata.creator or '',
+                        'base_model': metadata.base_model or '',
+                        'sha256': metadata.sha256,
+                        'download_url': download_url,
+                        'nsfw_level': metadata.nsfw_level,
+                        'tags': ', '.join(metadata.tags) if metadata.tags else '',
+                        'description': metadata.description or ''
+                    }
+                    detailed_entries.append(entry)
+        
+        return detailed_entries
 
 
 # 使用例
