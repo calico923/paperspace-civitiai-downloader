@@ -16,7 +16,7 @@ Civitai.comからモデルをダウンロードするスタンドアロンPython
    - レジューム機能対応
    - 進捗表示とエラーハンドリング
 
-3. **プロトタイプスキャナー**
+3. **メタデータスキャナー**
    - 既存のモデルファイルからメタデータを逆引き
    - SHA256ハッシュベースの検索
    - バッチ処理による一括メタデータ抽出
@@ -38,7 +38,7 @@ graph TD
     K --> L[ファイル保存]
     L --> M[履歴更新]
     
-    N[プロトタイプスキャナー] --> O[既存ファイル検索]
+    N[メタデータスキャナー] --> O[既存ファイル検索]
     O --> P[バッチ処理]
     P --> Q[メタデータ一括抽出]
     Q --> R[結果統合]
@@ -118,7 +118,7 @@ cp config.json.example config.json
 
 ## 使用方法
 
-### プロトタイプスキャナーの実行
+### メタデータスキャナーの実行
 
 #### 1. 設定ファイルの準備
 ```bash
@@ -140,15 +140,11 @@ python model_metadata_scanner.py
 
 # 全ディレクトリの一括スキャン
 python regenerate_metadata.py
-
-# 特定ファイルのテスト
-python test_url_fix.py
 ```
 
 #### 3. 出力ファイル
 - `model_metadata_results.json`: 詳細メタデータ（JSON形式）
-- `download_history_updated.csv`: ダウンロード履歴（CSV形式）
-- `detailed_metadata.csv`: 詳細メタデータ（CSV形式）
+- `download_history.csv`: ダウンロード履歴（CSV形式、json_to_csv.pyが自動追記）
 - `logs/model_metadata_scanner_YYYY-MM-DD_HH-MM-SS.log`: 実行ログ
 
 ### JSON→CSV変換
@@ -176,7 +172,7 @@ python downloader.py -u "URL" -t "TYPE"
 
 **パラメータ:**
 - `-u, --url`: Civitai モデルURL（必須）
-- `-t, --type`: モデルタイプ `lora`, `checkpoint`, `embedding`（必須）
+- `-t, --type`: モデルタイプ `lora`, `checkpoint`, `embedding`（オプション、指定しない場合は自動判定）
 - `-c, --config`: 設定ファイルのパス（オプション、デフォルト: `config.json`）
 - `--list-history`: ダウンロード履歴を表示
 - `--redownload INDEX`: 履歴から指定インデックスのアイテムを再ダウンロード
@@ -185,14 +181,19 @@ python downloader.py -u "URL" -t "TYPE"
 
 ### 対応URL形式
 
-以下の3つの形式のURLに対応：
+以下の2つの形式のURLに対応：
 
 1. `https://civitai.com/models/649516`
 2. `https://civitai.com/models/649516?modelVersionId=726676`
 
 ### 使用例
 
-#### LoRAモデルをダウンロード
+#### モデルタイプを自動判定
+```bash
+python downloader.py -u "https://civitai.com/models/649516?modelVersionId=726676"
+```
+
+#### LoRAモデルをダウンロード（手動指定）
 ```bash
 python downloader.py -u "https://civitai.com/models/649516?modelVersionId=726676" -t lora
 ```
