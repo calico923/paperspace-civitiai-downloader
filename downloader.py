@@ -502,7 +502,7 @@ async def main():
     
     parser.add_argument(
         '-u', '--url',
-        help='Civitai モデルURL'
+        help='Civitai モデルURL（引用符で囲んでください: -u "https://..."）'
     )
     
     parser.add_argument(

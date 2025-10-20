@@ -242,6 +242,17 @@ timestamp,model_type,url,filename,model_id,version_id,file_size
 
 ## トラブルシューティング
 
+### エラー: zsh: no matches found (URLエラー)
+- **原因**: zshが`?`や`&`をグロブパターンとして解釈
+- **解決方法**: URLを引用符で囲んでください
+```bash
+# ❌ エラー
+python downloader.py -u https://civitai.com/models/123?modelVersionId=456
+
+# ✅ 正しい使い方
+python downloader.py -u "https://civitai.com/models/123?modelVersionId=456"
+```
+
 ### エラー: 設定ファイルが見つかりません
 - `config.json.example`を`config.json`にコピーして編集してください
 
