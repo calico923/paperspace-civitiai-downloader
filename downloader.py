@@ -448,18 +448,18 @@ async def redownload_all(downloads: List[Dict], config: ConfigManager, force: bo
             print(f"{'-'*40}")
             
             try:
-                # 重複チェック（forceがFalseの場合のみ）
+                # ファイル存在チェック（forceがFalseの場合のみ）
                 if not force:
-                    # URLを解析してmodel_idとversion_idを取得
+                    # ダウンロード先パスを取得
                     try:
-                        model_id, version_id = CivitaiURLParser.parse_url(url)
-                        # 履歴マネージャーを取得
-                        history_manager = DownloadHistoryManager(config.get_history_file())
-                        model_duplicate = history_manager.check_model_downloaded(model_id, version_id)
-                        if model_duplicate:
-                            print(f"⚠️  スキップ: 既にダウンロード済み")
+                        download_path = config.get_download_path(model_type)
+                        file_path = os.path.join(download_path, filename)
+
+                        # ファイルが既に存在する場合はスキップ
+                        if os.path.exists(file_path):
+                            print(f"⚠️  スキップ: ファイルが既に存在")
                             continue
-                    except ValueError:
+                    except (ValueError, AttributeError):
                         pass
                 
                 # ダウンロード実行

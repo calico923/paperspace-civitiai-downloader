@@ -139,21 +139,26 @@ python regenerate_metadata.py
 ```
 
 #### 3. 出力ファイル
-- `model_metadata_results.json`: 詳細メタデータ（JSON形式）
-- `download_history.csv`: ダウンロード履歴（CSV形式、json_to_csv.pyが自動追記）
-- `logs/model_metadata_scanner_YYYY-MM-DD_HH-MM-SS.log`: 実行ログ
+- 共通: `model_metadata_results.json`（詳細メタデータ, JSON）
+- model_metadata_scanner.py を直接実行: `download_history.csv` に重複チェック付きで自動追記（内部で `json_to_csv.py` を呼び出し）
+- regenerate_metadata.py を実行: `download_history_updated.csv` を新規生成（既存履歴は変更しない）
+- ログ: `logs/model_metadata_scanner_YYYY-MM-DD_HH-MM-SS.log`
 
 ### JSON→CSV変換
 
 スキャナーが生成したJSONファイルをCSV形式に変換：
 
 ```bash
-# model_metadata_results.json を download_history.csv に変換・追記
+# 既存の履歴(download_history.csv)へ追記（重複スキップ）
 python json_to_csv.py -i model_metadata_results.json
 
 # カスタム出力先を指定
 python json_to_csv.py -i model_metadata_results.json -o custom_history.csv
 ```
+
+- 備考:
+  - model_metadata_scanner.py を直接実行した場合は自動で `download_history.csv` に追記されます。
+  - regenerate_metadata.py は `download_history_updated.csv` を生成します。既存履歴にマージする場合は上記の `json_to_csv.py` を使って `-o download_history.csv` を指定してください。
 
 **機能:**
 - 重複チェック（model_id + version_idベース）
