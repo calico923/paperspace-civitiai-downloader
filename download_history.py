@@ -6,6 +6,7 @@ Download History Manager Module
 
 import os
 import csv
+import shutil
 from datetime import datetime
 from typing import Optional, List, Dict
 
@@ -15,24 +16,24 @@ class DownloadHistoryManager:
     
     # CSVのヘッダー
     CSV_HEADERS = [
-        'timestamp', 'model_type', 'url', 'filename', 
+        'timestamp', 'model_type', 'api_model_type', 'lora_subcategory', 'url', 'filename',
         'model_id', 'version_id', 'file_size', 'file_size_bytes'
     ]
     
     def __init__(self, history_file: str):
         """
         DownloadHistoryManagerを初期化
-        
+
         Args:
             history_file: 履歴ファイルのパス
         """
         self.history_file = history_file
-        
+
         # 履歴ファイルのディレクトリが存在しない場合は作成
         history_dir = os.path.dirname(history_file)
         if history_dir and not os.path.exists(history_dir):
             os.makedirs(history_dir, exist_ok=True)
-        
+
         # CSVファイルが存在しない場合はヘッダーを作成
         self._ensure_csv_headers()
     
@@ -45,7 +46,7 @@ class DownloadHistoryManager:
                     writer.writerow(self.CSV_HEADERS)
             except Exception as e:
                 print(f"⚠️  CSVヘッダーの作成に失敗: {str(e)}")
-    
+
     def record_download(
         self,
         url: str,
@@ -53,11 +54,13 @@ class DownloadHistoryManager:
         filename: str,
         model_id: Optional[int] = None,
         version_id: Optional[int] = None,
-        file_size: Optional[int] = None
+        file_size: Optional[int] = None,
+        api_model_type: Optional[str] = None,
+        lora_subcategory: Optional[str] = None
     ) -> None:
         """
         ダウンロード成功を履歴に記録（CSV形式）
-        
+
         Args:
             url: ダウンロード元URL
             model_type: モデルタイプ
@@ -65,16 +68,20 @@ class DownloadHistoryManager:
             model_id: モデルID
             version_id: バージョンID
             file_size: ファイルサイズ（バイト）
+            api_model_type: APIから取得したモデルタイプ（LORA, CHECKPOINT, TEXTUALINVERSION等）
+            lora_subcategory: LoRAのサブカテゴリ（style, character等）
         """
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
+
         # ファイルサイズを人間が読みやすい形式に変換
         size_str = self._format_file_size(file_size) if file_size else "Unknown"
-        
+
         # CSV行データを作成
         row_data = [
             timestamp,
             model_type,
+            api_model_type or "",
+            lora_subcategory or "",
             url,
             filename,
             str(model_id) if model_id else "",

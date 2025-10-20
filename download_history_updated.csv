@@ -1,3 +1,0 @@
-timestamp,model_type,url,filename,model_id,version_id,file_size,file_size_bytes
-2025-10-19 03:30:48,lora,https://civitai.com/models/57295,qos_tattoo_v0.1-illu_done.safetensors,57295,1662504,0.05 GB,57420759
-2025-10-19 03:30:48,checkpoint,https://civitai.com/models/827184,waiIllustriousSDXL_v150.safetensors,827184,2167369,6.46 GB,6938040682

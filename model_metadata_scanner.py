@@ -9,6 +9,8 @@ import os
 import json
 import hashlib
 import logging
+import subprocess
+import sys
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -17,8 +19,44 @@ import asyncio
 import time
 import random
 
-# ログレベルを設定
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+def setup_logging():
+    """ロギング設定（コンソール + ファイル出力）"""
+    import os
+    from datetime import datetime
+
+    # logsディレクトリ作成
+    os.makedirs('logs', exist_ok=True)
+
+    # ログファイル名生成（タイムスタンプ付き）
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    log_file = f'logs/model_metadata_scanner_{timestamp}.log'
+
+    # ロギング設定
+    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+    # ロギングハンドラ設定
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+
+    # ファイルハンドラ
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(logging.Formatter(log_format))
+
+    # コンソールハンドラ（WARNING以上のみ表示）
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.WARNING)
+    console_handler.setFormatter(logging.Formatter(log_format))
+
+    # ハンドラを追加
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+
+    return log_file
+
+
+# ロギング初期化
+_log_file = setup_logging()
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -40,6 +78,8 @@ class ModelMetadata:
     creator: Optional[str] = None
     nsfw_level: int = 0
     from_civitai: bool = False
+    api_model_type: Optional[str] = None  # APIのmodel.type値（LORA, LoCon, Checkpoint, TextualInversion）
+    lora_subcategory: Optional[str] = None  # LoRAのサブカテゴリ（style, character, concept等）
     
     def __post_init__(self):
         if self.download_urls is None:
@@ -157,7 +197,7 @@ class ModelMetadataScanner:
     def _detect_base_model(self, file_path: str, file_name: str) -> str:
         """ファイル名からベースモデルを判定"""
         file_name_lower = file_name.lower()
-        
+
         if 'sdxl' in file_name_lower:
             return 'SDXL'
         elif 'sd3' in file_name_lower:
@@ -168,6 +208,69 @@ class ModelMetadataScanner:
             return 'SD1.5'
         else:
             return 'Unknown'
+
+    def _detect_model_type_from_api(self, model_info: Dict) -> Tuple[str, str]:
+        """
+        API レスポンスからモデルタイプを判定
+
+        Args:
+            model_info: API レスポンス
+
+        Returns:
+            Tuple[model_type, api_model_type]
+            - model_type: 'lora', 'checkpoint', 'embedding' など
+            - api_model_type: API の元の値（'LORA', 'LoCon', 'TextualInversion' など）
+        """
+        api_type = model_info.get('model', {}).get('type', '').upper()
+
+        if not api_type:
+            return 'unknown', ''
+
+        # マッピング定義
+        type_mapping = {
+            'LORA': 'lora',
+            'LOCON': 'lora',        # LoCon も lora として扱う
+            'CHECKPOINT': 'checkpoint',
+            'TEXTUALINVERSION': 'embedding',
+        }
+
+        model_type = type_mapping.get(api_type, 'unknown')
+        return model_type, api_type
+
+    def _detect_lora_subcategory(self, tags: List[str]) -> Optional[str]:
+        """
+        tags から LoRA のサブカテゴリを判定
+
+        優先順位: style, poses, concept, character, clothing, background, objects
+
+        Args:
+            tags: モデルの tags 配列
+
+        Returns:
+            サブカテゴリ名、該当なしの場合は None
+        """
+        if not tags:
+            return None
+
+        # 小文字変換して検索
+        tags_lower = [tag.lower() for tag in tags]
+
+        # 優先順位順にチェック
+        subcategories = [
+            'style',
+            'poses',
+            'concept',
+            'character',
+            'clothing',
+            'background',
+            'objects'
+        ]
+
+        for category in subcategories:
+            if category in tags_lower:
+                return category
+
+        return 'other'  # どれにも該当しない場合
     
     async def _search_model_by_hash(self, sha256: str) -> Optional[Dict]:
         """SHA256ハッシュでCivitaiからモデルを検索（複数プロバイダー対応）"""
@@ -420,10 +523,28 @@ class ModelMetadataScanner:
                     metadata.creator = model_info.get('creator', {}).get('username') if model_info.get('creator') else None
                     metadata.nsfw_level = model_info.get('nsfw', 0)
                     metadata.version_id = model_info.get('id')
-                    
+
+                    # ✅ API から正確なモデルタイプを取得（優先度最高）
+                    api_model_type, original_api_type = self._detect_model_type_from_api(model_info)
+                    if api_model_type != 'unknown':
+                        logger.info(f"API モデルタイプ判定: {original_api_type} → {api_model_type}")
+                        metadata.model_type = api_model_type
+                        metadata.api_model_type = original_api_type
+
+                    # ✅ LoRA の場合、サブカテゴリを判定
+                    if metadata.model_type == 'lora' and metadata.tags:
+                        metadata.lora_subcategory = self._detect_lora_subcategory(metadata.tags)
+                        if metadata.lora_subcategory:
+                            logger.info(f"LoRA サブカテゴリ判定: {metadata.lora_subcategory}")
+
+                    # Civitai APIから取得したbaseModelを優先的に使用
+                    api_base_model = model_info.get('baseModel')
+                    if api_base_model:
+                        metadata.base_model = api_base_model
+
                     if metadata.model_id and metadata.version_id:
                         metadata.civitai_url = f"https://civitai.com/models/{metadata.model_id}?modelVersionId={metadata.version_id}"
-                    
+
                     # ダウンロードURLを抽出
                     metadata.download_urls = self._extract_download_urls(model_info)
                     logger.info(f"ダウンロードURL抽出: {len(metadata.download_urls)}個")
@@ -560,16 +681,16 @@ class ModelMetadataScanner:
         try:
             import csv
             from datetime import datetime
-            
+
             with open(output_path, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
-                
-                # ヘッダー行
+
+                # ヘッダー行（10列フォーマット）
                 writer.writerow([
-                    'timestamp', 'model_type', 'url', 'filename', 'model_id', 
-                    'version_id', 'file_size', 'file_size_bytes'
+                    'timestamp', 'model_type', 'api_model_type', 'lora_subcategory',
+                    'url', 'filename', 'model_id', 'version_id', 'file_size', 'file_size_bytes'
                 ])
-                
+
                 # データ行
                 for metadata in metadata_list:
                     if metadata.download_urls:
@@ -577,7 +698,7 @@ class ModelMetadataScanner:
                             # ファイルサイズをGBとバイトで表示
                             file_size_gb = metadata.file_size / (1024**3)
                             file_size_str = f"{file_size_gb:.2f} GB"
-                            
+
                             # Civitai URLを取得（model_idとversion_idがある場合は正しいURL形式で生成）
                             if metadata.civitai_url:
                                 civitai_url = metadata.civitai_url
@@ -585,10 +706,12 @@ class ModelMetadataScanner:
                                 civitai_url = f"https://civitai.com/models/{metadata.model_id}?modelVersionId={metadata.version_id}"
                             else:
                                 civitai_url = download_url
-                            
+
                             writer.writerow([
                                 datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                                 metadata.model_type,
+                                metadata.api_model_type or '',
+                                metadata.lora_subcategory or '',
                                 civitai_url,
                                 metadata.file_name,
                                 metadata.model_id or '',
@@ -596,23 +719,23 @@ class ModelMetadataScanner:
                                 file_size_str,
                                 str(metadata.file_size)
                             ])
-            
+
             logger.info(f"ダウンロード履歴をCSV形式で保存しました: {output_path}")
-        
+
         except Exception as e:
             logger.error(f"CSV保存エラー: {e}")
     
     def extract_download_urls_for_csv(self, metadata_list: List[ModelMetadata]) -> List[Dict]:
         """CSV出力用のダウンロードURL情報を抽出（download_history.csv形式）"""
         download_entries = []
-        
+
         for metadata in metadata_list:
             if metadata.download_urls:
                 for download_url in metadata.download_urls:
                     # ファイルサイズをGBとバイトで表示
                     file_size_gb = metadata.file_size / (1024**3)
                     file_size_str = f"{file_size_gb:.2f} GB"
-                    
+
                     # Civitai URLを取得（model_idとversion_idがある場合は正しいURL形式で生成）
                     if metadata.civitai_url:
                         civitai_url = metadata.civitai_url
@@ -620,10 +743,12 @@ class ModelMetadataScanner:
                         civitai_url = f"https://civitai.com/models/{metadata.model_id}?modelVersionId={metadata.version_id}"
                     else:
                         civitai_url = download_url
-                    
+
                     entry = {
                         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                         'model_type': metadata.model_type,
+                        'api_model_type': metadata.api_model_type or '',
+                        'lora_subcategory': metadata.lora_subcategory or '',
                         'url': civitai_url,
                         'filename': metadata.file_name,
                         'model_id': metadata.model_id or '',
@@ -632,7 +757,7 @@ class ModelMetadataScanner:
                         'file_size_bytes': str(metadata.file_size)
                     }
                     download_entries.append(entry)
-        
+
         return download_entries
     
     def extract_detailed_metadata_for_csv(self, metadata_list: List[ModelMetadata]) -> List[Dict]:
@@ -652,6 +777,8 @@ class ModelMetadataScanner:
                     entry = {
                         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                         'model_type': metadata.model_type,
+                        'api_model_type': metadata.api_model_type or '',  # API の元の値
+                        'lora_subcategory': metadata.lora_subcategory or '',  # LoRA のサブカテゴリ
                         'url': civitai_url,
                         'filename': metadata.file_name,
                         'model_id': metadata.model_id or '',
@@ -676,16 +803,21 @@ class ModelMetadataScanner:
 async def main():
     """使用例"""
     import json
-    
+
+    # ログファイル初期化メッセージ
+    logger.info(f"========== Model Metadata Scanner 実行開始 ==========")
+    logger.info(f"📝 ログファイル: {_log_file}")
+    print(f"✅ ログファイルを作成しました: {_log_file}")
+
     # config.jsonから設定を読み込み
     config_path = "config.json"
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-        
+
         api_key = config.get('civitai_api_key', 'YOUR_API_KEY_HERE')
         download_paths = config.get('download_paths', {})
-        
+
         print(f"🔑 APIキー: {'設定済み' if api_key != 'YOUR_API_KEY_HERE' else '未設定'}")
         print(f"📁 ダウンロードパス: {download_paths}")
         
@@ -729,8 +861,31 @@ async def main():
             output_file = "model_metadata_results.json"
             scanner.save_metadata_to_json(all_metadata, output_file)
             print(f"\n💾 結果を保存しました: {output_file}")
+
+            # JSON→CSV変換を自動実行
+            print(f"\n📄 CSV変換を開始中...")
+            try:
+                result = subprocess.run(
+                    [sys.executable, 'json_to_csv.py', '-i', output_file],
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+
+                if result.returncode == 0:
+                    print(result.stdout)
+                else:
+                    print(f"⚠️ CSV変換に失敗しました:")
+                    print(result.stderr)
+            except Exception as e:
+                print(f"⚠️ CSV変換エラー: {str(e)}")
         else:
             print(f"\n❌ スキャンできるファイルが見つかりませんでした")
+
+        # 実行完了ログ
+        logger.info(f"========== Model Metadata Scanner 実行完了 ==========")
+        print(f"\n✅ 処理完了。詳細ログは以下を参照してください:")
+        print(f"   📝 {_log_file}")
 
 
 if __name__ == "__main__":

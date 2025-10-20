@@ -51,5 +51,16 @@ config.json
 download_history.csv
 *.part
 
+# Backup and legacy code
+bak/
+
+# Generated files
+logs/
+test/
+model_metadata_results.json
+download_history_updated.csv
+detailed_metadata.csv
+*.backup
+
 # Jupyter Notebook
 .ipynb_checkpoints/

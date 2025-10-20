@@ -16,6 +16,11 @@ Civitai.comからモデルをダウンロードするスタンドアロンPython
    - レジューム機能対応
    - 進捗表示とエラーハンドリング
 
+3. **プロトタイプスキャナー**
+   - 既存のモデルファイルからメタデータを逆引き
+   - SHA256ハッシュベースの検索
+   - バッチ処理による一括メタデータ抽出
+
 ### 機能関係図
 
 ```mermaid
@@ -33,17 +38,25 @@ graph TD
     K --> L[ファイル保存]
     L --> M[履歴更新]
     
-    N[設定ファイル] --> O[APIキー管理]
-    O --> C
-    O --> I
+    N[プロトタイプスキャナー] --> O[既存ファイル検索]
+    O --> P[バッチ処理]
+    P --> Q[メタデータ一括抽出]
+    Q --> R[結果統合]
     
-    P[ログシステム] --> Q[デバッグ情報]
-    Q --> R[エラーハンドリング]
+    S[設定ファイル] --> T[APIキー管理]
+    T --> C
+    T --> I
+    T --> N
+    
+    U[ログシステム] --> V[デバッグ情報]
+    V --> W[エラーハンドリング]
     
     style A fill:#e1f5fe
     style H fill:#e8f5e8
+    style N fill:#f3e5f5
     style G fill:#fff3e0
     style M fill:#fff3e0
+    style R fill:#fff3e0
 ```
 
 ## 特徴
@@ -58,8 +71,13 @@ graph TD
 - 🔄 バッチダウンロード対応（Notebook版）
 - 🚀 非同期処理による高速ダウンロード
 - 🔍 SHA256ハッシュベースのメタデータ抽出
-- 🏷️ ディレクトリ構造によるモデルタイプ自動判定
-- 🔗 バージョン特定URL生成（modelId?modelVersionId形式）
+- 🤖 API ベースの正確なモデルタイプ判定（LORA, LoCon, Checkpoint, TextualInversion）
+- 🏷️ LoRA サブカテゴリ自動分類（style, character, concept, clothing, background, objects, poses）
+- 🏷️ ディレクトリ構造 + API データによるモデルタイプ自動判定
+- 🔗 バージョン特定URL生成
+- 🔍 プロトタイプスキャナーによる既存ファイルのメタデータ逆引き
+- 📝 タイムスタンプ付き実行ログ自動保存（logs/ディレクトリ）
+- 📊 JSON→CSV変換ツール（重複チェック・自動追記）
 
 ## インストール
 
@@ -100,6 +118,56 @@ cp config.json.example config.json
 
 ## 使用方法
 
+### プロトタイプスキャナーの実行
+
+#### 1. 設定ファイルの準備
+```bash
+# config.jsonを編集
+{
+  "civitai_api_key": "YOUR_API_KEY_HERE",
+  "download_paths": {
+    "lora": "./downloads/loras",
+    "checkpoint": "./downloads/checkpoints", 
+    "embedding": "./downloads/embeddings"
+  }
+}
+```
+
+#### 2. スキャナーの実行
+```bash
+# 単一ファイルのメタデータ抽出
+python model_metadata_scanner.py
+
+# 全ディレクトリの一括スキャン
+python regenerate_metadata.py
+
+# 特定ファイルのテスト
+python test_url_fix.py
+```
+
+#### 3. 出力ファイル
+- `model_metadata_results.json`: 詳細メタデータ（JSON形式）
+- `download_history_updated.csv`: ダウンロード履歴（CSV形式）
+- `detailed_metadata.csv`: 詳細メタデータ（CSV形式）
+- `logs/model_metadata_scanner_YYYY-MM-DD_HH-MM-SS.log`: 実行ログ
+
+### JSON→CSV変換
+
+スキャナーが生成したJSONファイルをCSV形式に変換：
+
+```bash
+# model_metadata_results.json を download_history.csv に変換・追記
+python json_to_csv.py -i model_metadata_results.json
+
+# カスタム出力先を指定
+python json_to_csv.py -i model_metadata_results.json -o custom_history.csv
+```
+
+**機能:**
+- 重複チェック（model_id + version_idベース）
+- 既存CSVへの自動追記
+- スキップされた重複の通知
+
 ### 基本的な使い方
 
 ```bash
@@ -121,7 +189,6 @@ python downloader.py -u "URL" -t "TYPE"
 
 1. `https://civitai.com/models/649516`
 2. `https://civitai.com/models/649516?modelVersionId=726676`
-3. `https://civitai.com/models/649516/model-name?modelVersionId=726676`
 
 ### 使用例
 
@@ -200,6 +267,9 @@ civitai_downloader/
 ├── config.json.example      # 設定ファイルのテンプレート
 ├── config.json              # 実際の設定ファイル（手動作成）
 ├── downloader.py            # メインスクリプト
+├── model_metadata_scanner.py # メタデータスキャナー
+├── json_to_csv.py           # JSON→CSV変換ツール
+├── regenerate_metadata.py   # 一括メタデータ再生成
 ├── url_parser.py            # URL解析モジュール
 ├── config_manager.py        # 設定管理モジュール
 ├── download_history.py      # 履歴管理モジュール
@@ -209,6 +279,8 @@ civitai_downloader/
 │   ├── loras/
 │   ├── checkpoints/
 │   └── embeddings/
+├── logs/                    # 実行ログ（自動作成）
+├── bak/                     # 旧コード保管
 └── download_history.csv     # ダウンロード履歴（自動作成）
 ```
 
@@ -226,48 +298,68 @@ civitai_downloader/
 - ✅ **メタデータ抽出**: モデル名、作成者、タグ、NSFWレベル等の詳細情報取得
 - ✅ **ダウンロードURL抽出**: プライマリURLとミラーURLの取得
 - ✅ **CSV形式出力**: 既存のdownload_history.csv形式に完全対応
-- ✅ **ディレクトリ構造判定**: ファイルパスからモデルタイプを自動判定
-- ✅ **バージョン特定URL**: `https://civitai.com/models/{modelId}?modelVersionId={versionId}`形式
+- ✅ **APIベースモデル判定**: `model.type`フィールドから正確なモデルタイプを判定
+- ✅ **LoRAサブカテゴリ分類**: タグベースの自動分類（style, character, concept, clothing, background, objects, poses）
+- ✅ **LoCon検出**: LoCon（Lycoris）をLoRAとして正確に分類
+- ✅ **フォールバック判定**: API取得失敗時はディレクトリ構造から判定
+- ✅ **バージョン特定URL**: モデルIDとバージョンIDを含むURL生成
 
-#### 2. ダウンロードシステム
+#### 2. プロトタイプスキャナー
+- ✅ **既存ファイル検索**: 指定ディレクトリ内のモデルファイルを自動検出
+- ✅ **バッチ処理**: 複数ファイルの一括メタデータ抽出
+- ✅ **逆引き機能**: ファイルからCivitaiのメタデータを逆引き取得
+- ✅ **結果統合**: 複数ファイルの結果を統合してCSV/JSON出力
+
+#### 3. ダウンロードシステム
 - ✅ **URL解析**: Civitai URLからモデルID/バージョンID抽出
 - ✅ **レジューム機能**: 中断したダウンロードの再開
 - ✅ **進捗表示**: リアルタイム進捗と速度表示
 - ✅ **エラーハンドリング**: 堅牢なエラー処理とリトライ機能
 - ✅ **履歴管理**: CSV形式でのダウンロード履歴保存
 
-#### 3. 設定・ログシステム
+#### 4. 設定・ログシステム
 - ✅ **設定管理**: JSON形式の設定ファイル
-- ✅ **ログ機能**: 詳細なデバッグログとエラーログ
+- ✅ **実行ログ**: タイムスタンプ付きログファイル自動生成（logs/）
+- ✅ **ログレベル制御**: ファイル（全ログ）/コンソール（WARNING以上）
 - ✅ **APIキー管理**: 環境変数での安全な管理
+
+#### 5. データ変換ツール
+- ✅ **JSON→CSV変換**: 重複チェック付き変換・追記機能
+- ✅ **自動重複検出**: model_id + version_idベースの重複判定
+- ✅ **バッチ処理対応**: 大量データの一括変換
 
 ### 対応モデルタイプ
 
-| タイプ | ディレクトリ | 判定方法 | 対応状況 |
-|--------|-------------|----------|----------|
-| LoRA | `/loras/` | ディレクトリ構造 | ✅ 完全対応 |
-| Checkpoint | `/checkpoints/` | ディレクトリ構造 | ✅ 完全対応 |
-| Embedding | `/embeddings/` | ディレクトリ構造 | ✅ 完全対応 |
+| タイプ | API型 | サブカテゴリ | 判定方法 | 対応状況 |
+|--------|------|------------|----------|----------|
+| LoRA | LORA, LoCon | style, character, concept, clothing, background, objects, poses | API (`model.type`) + タグ解析<br>フォールバック: ディレクトリ構造 (`/loras/`) | ✅ 対応 |
+| Checkpoint | CHECKPOINT | base model検出 | API (`model.type`)<br>フォールバック: ディレクトリ構造 (`/checkpoints/`) | ✅ 対応 |
+| Embedding | TEXTUALINVERSION | - | API (`model.type`)<br>フォールバック: ディレクトリ構造 (`/embeddings/`) | ✅ 対応 |
 
 ### 出力形式
 
 #### CSV形式（download_history.csv）
 ```csv
-timestamp,model_type,url,filename,model_id,version_id,file_size,file_size_bytes
-2025-10-19 04:11:04,checkpoint,https://civitai.com/models/827184?modelVersionId=2167369,waiIllustriousSDXL_v150.safetensors,827184,2167369,6.46 GB,6938040682
+timestamp,model_type,api_model_type,lora_subcategory,url,filename,model_id,version_id,file_size,file_size_bytes
+2025-10-19 04:11:04,checkpoint,CHECKPOINT,,https://civitai.com/models/827184?modelVersionId=2167369,waiIllustriousSDXL_v150.safetensors,827184,2167369,6.46 GB,6938040682
+2025-10-19 05:23:15,lora,LORA,character,https://civitai.com/models/649516?modelVersionId=726676,character_model.safetensors,649516,726676,143.25 MB,150220800
 ```
+
 
 #### 詳細メタデータ（JSON形式）
 ```json
 {
-  "file_name": "waiIllustriousSDXL_v150.safetensors",
-  "model_id": 827184,
-  "version_id": 2167369,
-  "model_name": "v15.0",
-  "creator": "WAI0731",
-  "civitai_url": "https://civitai.com/models/827184?modelVersionId=2167369",
-  "download_urls": ["https://civitai.com/api/download/models/2167369"],
-  "tags": ["anime", "base model"],
+  "file_name": "character_model.safetensors",
+  "model_id": 649516,
+  "version_id": 726676,
+  "model_type": "lora",
+  "api_model_type": "LORA",
+  "lora_subcategory": "character",
+  "model_name": "Character LoRA v1.0",
+  "creator": "ExampleCreator",
+  "civitai_url": "https://civitai.com/models/649516?modelVersionId=726676",
+  "download_urls": ["https://civitai.com/api/download/models/726676"],
+  "tags": ["character", "anime", "style"],
   "nsfw_level": 0
 }
 ```
@@ -279,6 +371,56 @@ timestamp,model_type,url,filename,model_id,version_id,file_size,file_size_bytes
 - ✅ **CSV出力**: 既存形式との互換性確認済み
 - ✅ **URL生成**: バージョン特定URLの正確性確認済み
 - ✅ **エラーハンドリング**: 各種エラーケースの対応確認済み
+- ✅ **モデルタイプ判定**: APIベース検出とフォールバック機能の検証済み
+- ✅ **サブカテゴリ分類**: LoRAタグベース分類の動作確認済み
+
+### モデル分類の仕組み
+
+#### 判定優先順位
+
+1. **APIベース判定（最優先）**
+   - Civitai APIの`model.type`フィールドから取得
+   - `LORA` → `lora`
+   - `LOCON` → `lora`（LyCorisもLoRAとして扱う）
+   - `CHECKPOINT` → `checkpoint`
+   - `TEXTUALINVERSION` → `embedding`
+
+2. **フォールバック判定（API失敗時）**
+   - ファイルパスのディレクトリ構造から判定
+   - `/loras/` → `lora`
+   - `/checkpoints/` → `checkpoint`
+   - `/embeddings/` → `embedding`
+
+#### LoRAサブカテゴリ判定
+
+タグ（tags）から以下の優先順位で判定：
+
+1. **style** - スタイル系LoRA
+2. **poses** - ポーズ制御
+3. **concept** - コンセプト・アイデア
+4. **character** - キャラクター
+5. **clothing** - 衣装・服装
+6. **background** - 背景
+7. **objects** - オブジェクト・小物
+8. **other** - その他（上記に該当しない場合）
+
+**判定例**:
+```json
+{
+  "tags": ["character", "anime", "style"],
+  "lora_subcategory": "style"  // 優先順位が最も高い "style" が選択される
+}
+```
+
+#### 判定結果の出力
+
+**CSV出力**:
+- `model_type`: 判定されたモデルタイプ（lora, checkpoint, embedding）
+- `api_model_type`: APIから取得した元の型（LORA, LOCON, CHECKPOINT, TEXTUALINVERSION）
+- `lora_subcategory`: LoRAのサブカテゴリ（LoRA以外は空）
+
+**JSON出力**:
+- すべてのメタデータフィールドに加えて、`api_model_type`と`lora_subcategory`が含まれる
 
 ## 注意事項
 

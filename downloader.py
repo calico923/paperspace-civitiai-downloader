@@ -17,7 +17,6 @@ import time
 from url_parser import CivitaiURLParser
 from config_manager import ConfigManager
 from download_history import DownloadHistoryManager
-from model_type_classifier import ModelTypeClassifier
 
 
 class CivitaiDownloader:
@@ -35,7 +34,6 @@ class CivitaiDownloader:
         self.base_url = "https://civitai.com/api/v1"
         self.session: Optional[aiohttp.ClientSession] = None
         self.chunk_size = 4 * 1024 * 1024  # 4MB chunks
-        self.type_classifier = ModelTypeClassifier()
     
     async def __aenter__(self):
         """非同期コンテキストマネージャーのエントリー"""
@@ -72,6 +70,59 @@ class CivitaiDownloader:
         if self.session:
             await self.session.close()
     
+    def _detect_model_type_from_api(self, version_info: Dict) -> Tuple[str, str]:
+        """
+        API レスポンスからモデルタイプを判定
+
+        Args:
+            version_info: APIから取得したバージョン情報
+
+        Returns:
+            Tuple[str, str]: (判定されたモデルタイプ, 元のAPIモデルタイプ)
+        """
+        api_type = version_info.get('model', {}).get('type', '').upper()
+
+        if not api_type:
+            return 'unknown', ''
+
+        # マッピング定義（model_metadata_scanner.pyと同じ）
+        type_mapping = {
+            'LORA': 'lora',
+            'LOCON': 'lora',
+            'CHECKPOINT': 'checkpoint',
+            'TEXTUALINVERSION': 'embedding',
+        }
+
+        model_type = type_mapping.get(api_type, 'unknown')
+        return model_type, api_type
+
+    def _detect_lora_subcategory(self, tags: List[str]) -> Optional[str]:
+        """
+        tags から LoRA のサブカテゴリを判定
+
+        Args:
+            tags: タグのリスト
+
+        Returns:
+            Optional[str]: LoRAのサブカテゴリ（style, character等）
+        """
+        if not tags:
+            return None
+
+        tags_lower = [tag.lower() for tag in tags]
+
+        # 優先順位順にチェック（model_metadata_scanner.pyと同じ）
+        subcategories = [
+            'style', 'poses', 'concept', 'character',
+            'clothing', 'background', 'objects'
+        ]
+
+        for category in subcategories:
+            if category in tags_lower:
+                return category
+
+        return 'other'
+
     def _get_headers(self, use_auth: bool = True) -> Dict[str, str]:
         """リクエストヘッダーを取得"""
         headers = {
@@ -297,13 +348,13 @@ class CivitaiDownloader:
         if model_type is None:
             # 自動判定
             print(f"🤖 モデルタイプを自動判定中...")
-            detected_type, reason = self.type_classifier.classify_from_metadata(version_info)
-            
-            if detected_type is None:
-                return False, f"モデルタイプの自動判定に失敗: {reason}", None
-            
+            detected_type, api_type = self._detect_model_type_from_api(version_info)
+
+            if detected_type == 'unknown':
+                return False, f"モデルタイプの自動判定に失敗しました", None
+
             model_type = detected_type
-            print(f"✅ 自動判定結果: {model_type} ({reason})")
+            print(f"✅ 自動判定結果: {model_type} (API型: {api_type})")
         else:
             # 手動指定されたタイプの検証
             actual_type = version_info.get('model', {}).get('type', '').lower()
@@ -344,10 +395,15 @@ class CivitaiDownloader:
         
         # ダウンロード実行
         success, error = await self.download_file(download_url, save_path, use_auth=True)
-        
+
         if not success:
             return False, error, None
-        
+
+        # APIからモデル型とサブカテゴリを抽出
+        _, api_model_type = self._detect_model_type_from_api(version_info)
+        tags = version_info.get('model', {}).get('tags', [])
+        lora_subcategory = self._detect_lora_subcategory(tags) if model_type == 'lora' else None
+
         # ダウンロード情報を返す
         download_info = {
             'url': url,
@@ -356,9 +412,11 @@ class CivitaiDownloader:
             'save_path': save_path,
             'model_id': model_id,
             'version_id': version_id or version_info.get('id'),
-            'file_size': file_size
+            'file_size': file_size,
+            'api_model_type': api_model_type,
+            'lora_subcategory': lora_subcategory
         }
-        
+
         return True, None, download_info
 
 
@@ -684,7 +742,9 @@ async def main():
                     filename=download_info['filename'],
                     model_id=download_info['model_id'],
                     version_id=download_info['version_id'],
-                    file_size=download_info.get('file_size')
+                    file_size=download_info.get('file_size'),
+                    api_model_type=download_info.get('api_model_type'),
+                    lora_subcategory=download_info.get('lora_subcategory')
                 )
                 
                 sys.exit(0)

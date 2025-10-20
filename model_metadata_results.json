@@ -1,11 +1,63 @@
 [
   {
+    "file_name": "sound_effects-V2.safetensors",
+    "file_path": "./downloads/loras/sound_effects-V2.safetensors",
+    "file_size": 25639316,
+    "sha256": "df9cc99facd95621968657238e44b2e4bbbb12031030ddfbc8cb086518b45a74",
+    "model_type": "lora",
+    "base_model": "Illustrious",
+    "civitai_url": "https://civitai.com/models/1107755?modelVersionId=2220968",
+    "download_urls": [
+      "https://civitai.com/api/download/models/2220968"
+    ],
+    "model_id": 1107755,
+    "version_id": 2220968,
+    "model_name": "v2 light",
+    "description": "<p>September 16, 2025: Version 2 Released<br />The purpose of Version 2 was to reduce the unnecessarily large file size. I have succeeded in significantly reducing the file size.</p><p>Have you ever felt that the “sound effects” tag is not effective enough?　Then I have created a LoRA to enhance the tag.</p><p><span style=\"color:rgb(253, 126, 20)\">Known issues</span><br />1. Decreased letter accuracy<br />2. checkpoints with poorly rendered “sound effects” are not improved much by using this LoRA</p><p><span style=\"color:rgb(76, 110, 245)\"><strong>Trigger Tag: </strong></span>sound effects</p><p><span style=\"color:rgb(250, 82, 82)\"><strong>recommended weight</strong></span><br />LoRA weight: 1<br />“sound effects” tag weight: 1 or more<br />e.g. -&gt; (sound effects:1.5), &lt;lora:sound_effects-000015:1&gt;</p>",
+    "tags": [
+      "concept"
+    ],
+    "creator": "5chneewei55",
+    "nsfw_level": 0,
+    "from_civitai": true,
+    "api_model_type": "LORA",
+    "lora_subcategory": "concept"
+  },
+  {
+    "file_name": "Robertlu1021_lemuen_arknights_v1.0-000010.safetensors",
+    "file_path": "./downloads/loras/Robertlu1021_lemuen_arknights_v1.0-000010.safetensors",
+    "file_size": 57431444,
+    "sha256": "a738ca7a6541215cda5a73b2a12b57e252da8a57a8cb44c1afb290641f68b783",
+    "model_type": "lora",
+    "base_model": "Illustrious",
+    "civitai_url": "https://civitai.com/models/1808045?modelVersionId=2046073",
+    "download_urls": [
+      "https://civitai.com/api/download/models/2046073"
+    ],
+    "model_id": 1808045,
+    "version_id": 2046073,
+    "model_name": "v1.0 for IL",
+    "description": "<p><strong>1.0: </strong></p><p></p><p><span style=\"color:rgb(76, 110, 245)\">如果你喜欢我的产品, 请不妨点个赞或者使用它发布作品.</span></p><p><span style=\"color:rgb(76, 110, 245)\">很欢迎您为我反馈使用体验, 以供我修正错误与优化细节.</span></p><p><span style=\"color:rgb(76, 110, 245)\">If you like my Lora. please give it a thumbs up or use it to publish your work.</span></p><p><span style=\"color:rgb(76, 110, 245)\">You are welcome to give me feedback on your experience so that I can correct errors and optimize details.</span></p><p></p><p><strong>Recommended Weight: </strong>0.7-1.0</p><p></p><p><strong>Main Prompt:</strong></p><pre><code>lemuen_\\(arknights\\) ,</code></pre><p><strong>Perfomance:</strong></p><pre><code>pink eyes , pink hair ,  straight_hair,  white halo,energy wings,</code></pre><p><strong>Outfits:</strong></p><pre><code>white choker , \ncropped jacket, white_shirt,cross-laced dress , bustier, belt buckle,arm belt,zipper, \nzettai ryouiki, flower_ornament ,lace-up boots, </code></pre><p><strong>Other items:</strong></p><pre><code>sniper rifle, wheelchair,</code></pre><p><strong>Tips:</strong></p><p></p><p>角色换装请降低lora权重和主关键词权重.</p><p><em>Please lower the lora weight and main keyword weight when u wanna changing the uniform.</em></p><p></p><p>请善用标签, 如果只添加服装关键词, 调整权重可用直接用于更换其他角色的服装. 相当于服装lora.</p><p>Please make good use of prompt. if you only add clothing prompts, you can adjusting the weight to directly change the clothing of other characters. Equivalent to Clothing lora.</p><p></p><p><strong>Logs:</strong></p><p>正常权重下, 服装和鞋子基本绑定在角色上了</p><p>轮椅和狙击枪只是进行了训练, 并未对互动动作进行优化</p><p>换装不是很方便.</p><p>发型有飘散的趋势, 目前不准备修正. 设定不准</p><p></p><p>.</p><p>.</p><p>.</p><p>.</p><p>.</p>",
+    "tags": [
+      "anime",
+      "character",
+      "arknights",
+      "game character",
+      "girls"
+    ],
+    "creator": "robertlu1021",
+    "nsfw_level": 0,
+    "from_civitai": true,
+    "api_model_type": "LORA",
+    "lora_subcategory": "character"
+  },
+  {
     "file_name": "qos_tattoo_v0.1-illu_done.safetensors",
     "file_path": "./downloads/loras/qos_tattoo_v0.1-illu_done.safetensors",
     "file_size": 57420759,
     "sha256": "d1c5280330eeb29ff22986661c4b9b65c831c57f8514170fc41625e00d0b6adb",
     "model_type": "lora",
-    "base_model": "Unknown",
+    "base_model": "Illustrious",
     "civitai_url": "https://civitai.com/models/57295?modelVersionId=1662504",
     "download_urls": [
       "https://civitai.com/api/download/models/1662504"
@@ -15,17 +67,19 @@
     "model_name": "v0.1-illu",
     "description": "<p><em>Support my work and get exclusive NSFW models at </em><a target=\"_blank\" rel=\"ugc\" href=\"https://www.deviantart.com/pantiesoft\"><strong><em><span style=\"color:rgb(121, 80, 242)\">DeviantArt</span></em></strong><em> </em></a><em>or </em><a target=\"_blank\" rel=\"ugc\" href=\"http://Booth.pm\"><strong><em><span style=\"color:rgb(121, 80, 242)\">Booth.pm</span></em></strong></a><em>. Please rate and leave a like if you enjoyed it, and follow for new content.</em></p><hr /><p><strong>Tags</strong>: qos</p><p><strong>Usage</strong>: qos on [placing]</p><p><strong>Examples</strong>: qos on breasts, qos on ass, qos on face, qos on shoulder</p><hr /><p>The training was tailored for Illustrious anime models (e.g. <a target=\"_blank\" rel=\"ugc\" href=\"https://civitai.com/models/827184/wai-nsfw-illustrious-sdxl\">WAI-NSFW</a>, <a target=\"_blank\" rel=\"ugc\" href=\"https://civitai.com/models/140272/hassaku-xl-illustrious\">Hassaku XL</a>, <a target=\"_blank\" rel=\"ugc\" href=\"https://civitai.com/models/1224788/prefect-illustrious-xl\">Prefect illustrious XL</a>). I recommend using at least the quality tag \"<em>masterpiece</em>\" in your prompt. Recommended parameters: Euler a, 20-30 steps, CFG 4-7.</p>",
     "tags": [
-      "queen of spades",
-      "tattoo",
-      "symbol",
       "concept",
+      "tattoo",
       "blacked",
+      "queen of spades",
       "spades",
+      "symbol",
       "qos"
     ],
     "creator": "psoft",
     "nsfw_level": 0,
-    "from_civitai": true
+    "from_civitai": true,
+    "api_model_type": "LORA",
+    "lora_subcategory": "concept"
   },
   {
     "file_name": "BAstyle_V4.0_NAI_VPred10.safetensors",
@@ -33,7 +87,7 @@
     "file_size": 212245456,
     "sha256": "306c1c63ed4430e2408688c134aba38c1e086a64c48648e0b35740730961f5bf",
     "model_type": "lora",
-    "base_model": "Unknown",
+    "base_model": "NoobAI",
     "civitai_url": "https://civitai.com/models/2049840?modelVersionId=2319898",
     "download_urls": [
       "https://civitai.com/api/download/models/2319898"
@@ -43,13 +97,42 @@
     "model_name": "v4.0",
     "description": "<p>在1426张图片上训练，使用一张RTX 5090。</p><p>触发词：</p><pre><code>BAstyle</code></pre><p>你可以尝试组合下列prompts，但不是必须的：</p><pre><code>cold tone / warm tone </code></pre><pre><code>red theme / aqua theme / blue theme / purple theme / yellow theme / grey theme / orange theme / pink theme</code></pre><p></p><p>Trained on 1,426 images using a single RTX 5090.</p><p>Trigger word:</p><pre><code>BAstyle</code></pre><p>You can try combining the following prompts, but it's not required:</p><pre><code>cold tone / warm tone </code></pre><pre><code>red theme / aqua theme / blue theme / purple theme / yellow theme / grey theme / orange theme / pink theme</code></pre><p></p>",
     "tags": [
-      "blue archive",
       "style",
+      "blue archive",
       "cg style"
     ],
     "creator": "QR0W_",
     "nsfw_level": 0,
-    "from_civitai": true
+    "from_civitai": true,
+    "api_model_type": "LOCON",
+    "lora_subcategory": "style"
+  },
+  {
+    "file_name": "Robertlu1021_exusiai_the_new_covenant_arknights_v1.0-000010.safetensors",
+    "file_path": "./downloads/loras/Robertlu1021_exusiai_the_new_covenant_arknights_v1.0-000010.safetensors",
+    "file_size": 57427724,
+    "sha256": "40a4971c6866cf919734b2036ac44a6c657b66a0350724b35dbeb572790826ff",
+    "model_type": "lora",
+    "base_model": "Illustrious",
+    "civitai_url": "https://civitai.com/models/1882733?modelVersionId=2130994",
+    "download_urls": [
+      "https://civitai.com/api/download/models/2130994"
+    ],
+    "model_id": 1882733,
+    "version_id": 2130994,
+    "model_name": "v1.0 for IL",
+    "description": "<p><strong>1.0:</strong></p><p></p><p><span style=\"color:rgb(76, 110, 245)\">如果你喜欢我的产品, 请不妨点个收藏或者使用它发布作品. 欢迎您为我反馈使用体验, 以供我制作更好的lora.</span></p><p><span style=\"color:rgb(76, 110, 245)\">If you like my product, please add it to your collection or use it to publish your work. You are welcome to give me feedback on your experience so that I can make a better Lora.</span></p><p></p><p><strong>Recommended Weight: 0.7-1</strong></p><p></p><p><strong>Main Prompt:</strong></p><pre><code>exusiai_the_new_covenant_\\(arknights\\),</code></pre><p><strong>Performance:</strong></p><pre><code>red hair, orange eyes, one side up, swept bangs  ,  \n\nenergy wings  , traditional_halo , earrings , </code></pre><p><strong>Outfits:</strong></p><pre><code>fingerless gloves,   cropped jacket ,   open jacket , black shorts , thigh strap  , white thighhighs,  jewelry , sneakers ,   </code></pre><p><strong>Other:</strong></p><pre><code></code></pre><p></p><p><strong>Tips:</strong></p><p></p><p>角色换装请降低lora权重和主关键词权重.</p><p><em>Please lower the lora weight and main keyword weight when u wanna changing the uniform.</em></p><p></p><p>请善用标签, 如果只添加服装关键词, 调整权重可用直接用于更换其他角色的服装. 相当于服装lora.</p><p>Please make good use of prompt. if you only add clothing prompts, you can adjusting the weight to directly change the clothing of other characters. Equivalent to Clothing lora.</p><p></p><p><strong>Logs:</strong></p><p></p><p></p><p></p>",
+    "tags": [
+      "character",
+      "arknights",
+      "game character",
+      "girls"
+    ],
+    "creator": "robertlu1021",
+    "nsfw_level": 0,
+    "from_civitai": true,
+    "api_model_type": "LORA",
+    "lora_subcategory": "character"
   },
   {
     "file_name": "waiIllustriousSDXL_v150.safetensors",
@@ -57,7 +140,7 @@
     "file_size": 6938040682,
     "sha256": "befc694a296f75e996488ebf9f9db8a1493bd059b6e704b975829e87d5aeb4fa",
     "model_type": "checkpoint",
-    "base_model": "SDXL",
+    "base_model": "Illustrious",
     "civitai_url": "https://civitai.com/models/827184?modelVersionId=2167369",
     "download_urls": [
       "https://civitai.com/api/download/models/2167369"
@@ -72,7 +155,9 @@
     ],
     "creator": "WAI0731",
     "nsfw_level": 0,
-    "from_civitai": true
+    "from_civitai": true,
+    "api_model_type": "CHECKPOINT",
+    "lora_subcategory": null
   },
   {
     "file_name": "waiIllustriousSDXL_v140.safetensors",
@@ -80,7 +165,7 @@
     "file_size": 6938040682,
     "sha256": "bdb59bac77d94ae7a55ff893170f9554c3f349e48a1b73c0c17c0b7c6f4d41a2",
     "model_type": "checkpoint",
-    "base_model": "SDXL",
+    "base_model": "Illustrious",
     "civitai_url": "https://civitai.com/models/827184?modelVersionId=1761560",
     "download_urls": [
       "https://civitai.com/api/download/models/1761560"
@@ -95,15 +180,52 @@
     ],
     "creator": "WAI0731",
     "nsfw_level": 0,
-    "from_civitai": true
+    "from_civitai": true,
+    "api_model_type": "CHECKPOINT",
+    "lora_subcategory": null
+  },
+  {
+    "file_name": "lazypos.safetensors",
+    "file_path": "./downloads/embeddings/lazypos.safetensors",
+    "file_size": 180376,
+    "sha256": "30866692653cb0063484dec240bc7971adc5767753b0cbbe072e2ddd7ff16b81",
+    "model_type": "embedding",
+    "base_model": "Illustrious",
+    "civitai_url": "https://civitai.com/models/1302719?modelVersionId=1833157",
+    "download_urls": [
+      "https://civitai.com/api/download/models/1833157"
+    ],
+    "model_id": 1302719,
+    "version_id": 1833157,
+    "model_name": "lazypos v2",
+    "description": "<p><strong>💖 Support &amp; Share the Magic! </strong><br />Love these embeddings? <strong>Like, add to collection, and tag this resource </strong>in your creations—I’d <em>adore </em>to see what you make! 🎨✨</p><p><strong>👉 Looking for amazing anime model? Check out </strong><a target=\"_blank\" rel=\"ugc\" href=\"https://civitai.com/models/1277670\"><strong>JANKU </strong></a><strong>by yours truly, you won't be disappointed. It is highly tested with my embedding! It also has ONSITE generation support!</strong></p><p><strong>👉 More goodies on my profile! Follow for updates!</strong></p><p><strong>👉 Join me</strong> on <a target=\"_blank\" rel=\"ugc\" href=\"https://discord.gg/tWrKk3jcXx\">our discord server</a> (<a target=\"_blank\" rel=\"ugc\" href=\"https://discord.gg/tWrKk3jcXx\">https://discord.gg/tWrKk3jcXx</a>)! <strong>Share art, ask for help, or just chat</strong>. We have <a target=\"_blank\" rel=\"ugc\" href=\"https://civitai.com/articles/13331/7k-followers-updates-and-civchan-bot-launch\">CivChan bot plus games</a> there!</p><p><br /><strong>☕ Support future updates: </strong><a target=\"_blank\" rel=\"ugc\" href=\"https://ko-fi.com/janxd\">Buy me a coffee </a>or tip buzz! Every bit helps. Thank you for fueling the art! 🚀</p><hr /><p><strong>Want to improve your images with zero effort even more? </strong>✨</p><p>TrendCraft is the <em>only </em>detailer LoRA trained on the <strong>last 30 days of trending CivitAI images </strong>—just plug into <a target=\"_blank\" rel=\"ugc\" href=\"https://civitai.com/models/1378661/trendcraft-the-peoples-style-detailer-all-models-support\">Pony XL</a><a target=\"_blank\" rel=\"ugc\" href=\"https://chat.qwen.ai/c/link\"> </a>, <a target=\"_blank\" rel=\"ugc\" href=\"https://civitai.com/models/1350877/trendcraft-the-peoples-style-detailer-all-models-support\">Illustrious </a>, <a target=\"_blank\" rel=\"ugc\" href=\"https://civitai.com/models/1390819?modelVersionId=1571948\">SDXL</a>, or <a target=\"_blank\" rel=\"ugc\" href=\"https://civitai.com/models/1365604/trendcraft-the-peoples-style-detailer-all-models-support\">Noob Vpred</a><a target=\"_blank\" rel=\"ugc\" href=\"https://chat.qwen.ai/c/link\"> </a>workflows for instant, viral-ready upgrades. No prompts, no work. 🪄🔥</p><hr /><h3 id=\"lazy-embeddings:-for-creators-who-hate-typing-(but-love-results)\"><strong>🎨 Lazy Embeddings: For Creators Who Hate Typing (But Love Results) 🛋️</strong></h3><p><strong>Why waste time typing prompts? </strong>💤<br />Lazy Embeddings = <strong>pre-loaded magic </strong>for Illustrious/NoobAI/SDXL/Pony XL. Just drop <code>lazypos</code> + <code>lazyneg</code> and <em>go </em>. No copy-pasting, no tears.</p><hr /><p><strong>⚡ How to Be Lazy (Illustrious/Noob/SDXL):</strong></p><ol><li><p><strong>Positive Prompt: </strong>Start with <code>lazypos</code> (or<code>embedding:lazypos</code> for ComfyUI).</p></li><li><p><strong>Negative Prompt: </strong>Start with <code>lazyneg</code> (or <code>embedding:lazyneg</code>). If you are using onsite generation, make sure to use lazyneg v3.1 or higher.</p></li><li><p><strong>Done. </strong>Seriously. 🙃</p></li></ol><p><strong>Pony XL Users:</strong></p><ul><li><p><strong>Positive: </strong><code>lazyup</code> (or <code>embedding:lazyup</code>).</p></li><li><p><strong>Negative: </strong><code>lazydn</code> (or <code>embedding:lazydn</code>).</p></li><li><p><strong>Pro Tip: </strong><code>lazympos</code> + <code>lazyup</code> = ✨ <em>next-level quality </em>✨</p></li></ul><hr /><p><strong>🔥 If Hands Suck: </strong><br />Add <code>lazyhand</code> to your <strong>NEGATIVE </strong>prompt. <strong>Too lazy? </strong>Just use <code>lazyhand</code> + <code>lazyneg</code> (<em>boom </em>, fixed).<br />🙈<code>𝐍𝐒𝐅𝐖</code><strong>:</strong></p><p>Block not safe for work with <code>lazy𝐍𝐒𝐅𝐖</code> in <strong>negative</strong> prompt. If you want more use it in positive prompt!</p><p><strong>Mature characters:</strong> Use <code>lazy𝐥𝐨**</code> in negative to make characters more mature and don't get flag on CivitAI!</p><p><strong>Realism/Anime:</strong> Use <code>lazyreal</code> in negative if you want only anime output. In positive, if you want realistic people output.</p><hr /><p><strong>🌟 Why Lazy Wins:</strong></p><ul><li><p><strong>⚡ Zero Effort: </strong>Skip the prompt grind.</p></li><li><p><strong>🛠️ Universal: </strong>Works with <em>any </em>Illustrious/Noob/Pony/SXDL model.</p></li><li><p><strong>🤖 Battle-Tested: </strong>Trained on prompts real artists <em>actually use </em>.</p></li></ul><p><strong>💡 Peak Laziness: </strong><br /><code>lazypos</code> + <code>lazyneg</code> = <strong>flawless art with 2 words </strong>. Check the examples—<em>it’s easier than scrolling TikTok </em>.</p><hr /><p><strong>Stay Lazy. Generate Smarter. 🚀 </strong><br /><em>(Because life’s too short for repetitive typing.)</em></p><p><strong>Protip</strong>: <span style=\"color:rgb(250, 82, 82)\">Embeddings don't cost any extra buzz for using.</span> If anything, it will save you buzz since you won't generate bad images!</p><h3 id=\"can't-see-lazy-embeddings-for-onsite-generation\"><strong>🛠️ Can’t See Lazy Embeddings for Onsite Generation?</strong></h3><ol><li><p><strong>Enable Advanced Mode: </strong><br />Go to <a target=\"_blank\" rel=\"ugc\" href=\"https://civitai.com/user/account\">Account Settings </a>→ Toggle “Advanced Mode” → Now you can select Lazy Embeddings for <em>any </em>model.</p></li></ol><p><img src=\"https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/f70e6506-5989-4fe3-ad88-0c19a5bce612/width=525/f70e6506-5989-4fe3-ad88-0c19a5bce612.jpeg\" /><strong>🚀 ComfyUI Users:</strong></p><ul><li><p>Drop embeddings into your <code>embeddings</code> folder.</p></li><li><p><strong>Positive Prompt: </strong><code>embedding:lazypos</code></p></li><li><p><strong>Negative Prompt: </strong><code>embedding:lazyneg</code></p></li><li><p><strong>Pro Tip: </strong>Use <a target=\"_blank\" rel=\"ugc\" href=\"https://github.com/pythongosssss/ComfyUI-Custom-Scripts\">ComfyUI-Custom-Scripts </a>for autocomplete magic! (Though <code>lazypos</code>/<code>lazyneg</code> are short enough to remember 😎)</p></li></ul><p>💫<strong>Examples done with my model, </strong><a target=\"_blank\" rel=\"ugc\" href=\"https://civitai.com/models/1277670\"><strong>JANKU</strong></a>:</p><h2 id=\"here-is-what-they-are-doing-under-the-hood-so-you-don't-have-to-type-it!-please-note-i'm-always-taking-feedback-and-updating-these-embeddings.-i-use-them-daily!\"><strong><u><img src=\"https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/f81c93e2-b960-446b-9f93-d788d263ee32/width=525/f81c93e2-b960-446b-9f93-d788d263ee32.jpeg\" /></u></strong>Here is what they are doing under the hood so you don't have to type it! Please note I'm always taking feedback and updating these embeddings. I use them daily!</h2><p><strong><u>Illustrious XL / NoobAI / SDXL - see below for Pony XL</u></strong></p><p><strong>Positive prompt (lazypos v2.0):</strong></p><pre><code>masterpiece, newest, absurdres, best quality, amazing quality, very aesthetic, ultra-detailed, highly detailed</code></pre><p><strong>Negative prompt (lazyneg v3.0):</strong></p><pre><code>low quality, worst quality, lowres, username, sketch, censor, blurry, distorted, bad anatomy, signature, watermark, patreon logo, artist name</code></pre><p>Protip: Use <code>lazyhand</code> embedding in <strong>NEGATIVE </strong>if you want to fix the hands for the seed!</p><p><strong><u>Pony XL</u></strong></p><p><strong>Positive prompt (ponyup):</strong></p><pre><code>score_9, score_8_up, score_7_up, score_6_up, score_5_up, score_4_up</code></pre><p>ponyup7 only includes <code>score_9, score_8_up, score_7_up</code></p><p>ponyup6 only includes <code>score_9, score_8_up, score_7_up, score_6_up</code></p><p><strong>Negative prompt (ponydn):</strong></p><pre><code>score_4, score_5, score_6</code></pre><h3 id=\"other-versions:\"><u>Other versions</u>:</h3><p>lazympos</p><pre><code>masterpiece, best quality, amazing quality</code></pre><p></p>",
+    "tags": [
+      "negative",
+      "negative embedding",
+      "style",
+      "helper",
+      "embedding",
+      "pony",
+      "positive",
+      "sdxl",
+      "illustrious",
+      "noobai",
+      "scores",
+      "positing embedding"
+    ],
+    "creator": "janxd",
+    "nsfw_level": 0,
+    "from_civitai": true,
+    "api_model_type": "TEXTUALINVERSION",
+    "lora_subcategory": null
   },
   {
     "file_name": "Aileen.safetensors",
     "file_path": "./downloads/embeddings/Aileen.safetensors",
     "file_size": 281794856,
     "sha256": "bd0e9d0dd39e0ab61c342b2e824d458c49079a44b96daa229763adadf8038d9f",
-    "model_type": "embedding",
-    "base_model": "Unknown",
+    "model_type": "lora",
+    "base_model": "Illustrious",
     "civitai_url": "https://civitai.com/models/2038296?modelVersionId=2306948",
     "download_urls": [
       "https://civitai.com/api/download/models/2306948"
@@ -113,16 +235,18 @@
     "model_name": "v1.0",
     "description": "<p>【Ananta Character】</p><p>Aileen Ananta/爱琳 无限大/無限大 - Illustriou/NoobAI</p><p>Applicable Base Models: NoobAI-XL-EPS 1.1 / Illustriou1.0</p><p></p><p>Model Information:</p><p>Model Name: Aileen</p><p>Trigger Word: <span style=\"color:rgb(250, 176, 5)\">ailin,1girl,blonde hair,dress,long hair,gloves,blue eyes,black gloves,maid headdress,ahoge,thighhighs,black hair,lock,multicolored hair,braid,long hair,double bun,hair bun,detached sleeves,very long hair,streaked hair,twin braids,maid,black dress,mechanical arms,frills,bow,bare shoulders,</span></p><p>Model Series: Illustriou / NoobAI</p><p>Training Base Model: Illustriou0.1</p><p></p><p>Usage Suggestions &amp; Parameters (for NoobAI-XL-EPS 1.1)</p><p>The following are general references, please fine-tune according to your own needs.</p><p>LoRA Model Weight: 0.8–1.0</p><p>Sampler: Euler a</p><p>Steps: 25–30</p><p>CFG: 6 (recommended fine-tune between 6–7.5)</p><p>Resolution Recommendation: Portrait characters starting from 768×1024 / 832×1216 (extend the long side as needed)</p><p>High-Resolution Fix [Upscale]: R-ESRGAN 4x+ Anime6B / 4x-UltraSharp</p><p>Redraw Steps: 10</p><p>Redraw Strength (Denoise): 0.25–0.35</p><p></p><p>Prompt Suggestions</p><p>Negative Prompts:</p><p>text,username,logo,(low quality, worst quality:1.6),(bad anatomy),(inaccurate limb:1.2),bad composition,inaccurate eyes,extra digit,fewer digits,(extra arms:1.2),mammal,anthro,furry,</p>",
     "tags": [
-      "ananta",
       "character",
-      "爱琳",
+      "ananta",
       "aileen",
-      "无限大",
+      "illustriou",
       "無限大",
-      "illustriou"
+      "无限大",
+      "爱琳"
     ],
     "creator": "Whiteside",
     "nsfw_level": 0,
-    "from_civitai": true
+    "from_civitai": true,
+    "api_model_type": "LOCON",
+    "lora_subcategory": "character"
   }
 ]
