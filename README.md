@@ -25,38 +25,34 @@ Civitai.comからモデルをダウンロードするスタンドアロンPython
 
 ```mermaid
 graph TD
-    A[モデルファイル] --> B[SHA256ハッシュ計算]
-    B --> C[Civitai API検索]
-    C --> D[メタデータ取得]
-    D --> E[バージョン情報抽出]
-    E --> F[ダウンロードURL生成]
-    F --> G[CSV形式で保存]
-    
-    H[Civitai URL] --> I[URL解析]
-    I --> J[モデルID/バージョンID抽出]
-    J --> K[ダウンロード実行]
-    K --> L[ファイル保存]
-    L --> M[履歴更新]
-    
-    N[メタデータスキャナー] --> O[既存ファイル検索]
-    O --> P[バッチ処理]
-    P --> Q[メタデータ一括抽出]
-    Q --> R[結果統合]
-    
-    S[設定ファイル] --> T[APIキー管理]
-    T --> C
-    T --> I
-    T --> N
-    
-    U[ログシステム] --> V[デバッグ情報]
-    V --> W[エラーハンドリング]
-    
-    style A fill:#e1f5fe
-    style H fill:#e8f5e8
-    style N fill:#f3e5f5
-    style G fill:#fff3e0
-    style M fill:#fff3e0
-    style R fill:#fff3e0
+  %% ファイル起点（スキャナー）
+  A[モデルファイル] --> B[SHA256計算]
+  B --> C[Civitai API検索]
+  C --> D[メタデータ取得]
+  D --> E[モデルタイプ/LoRAサブカテゴリ判定]
+  E --> F[ダウンロードURL抽出]
+  F --> G1[JSON出力]
+  G1 --> G2[JSON→CSV変換]
+
+  %% URL起点（ダウンローダー）
+  H[Civitai URL] --> I[URL解析]
+  I --> J[モデルID/VersionID抽出]
+  J --> K[APIでバージョン情報取得]
+  K --> L[ダウンロード実行/ファイル保存]
+  L --> M[履歴更新(CSV追記)]
+
+  %% 設定
+  S[設定ファイル(APIキー/保存先/履歴先)] --> T[設定読込]
+  T --> C
+  T --> K
+  T --> L
+
+  %% スキャナーの入口
+  N[メタデータスキャナー] --> A
+  N --> G1
+
+  %% ログ
+  U[ログ(スキャナー詳細, DLは標準出力)] --> V[デバッグ/エラー]
 ```
 
 ## 特徴
@@ -99,7 +95,7 @@ cp config.json.example config.json
 
 ```json
 {
-  "civitai_api_key": "your_actual_api_key_here",
+  "civitai_api_key": "your_civitai_api_key_here",
   "download_paths": {
     "lora": "./downloads/loras",
     "checkpoint": "./downloads/checkpoints",
@@ -124,7 +120,7 @@ cp config.json.example config.json
 ```bash
 # config.jsonを編集
 {
-  "civitai_api_key": "YOUR_API_KEY_HERE",
+  "civitai_api_key": "your_civitai_api_key_here",
   "download_paths": {
     "lora": "./downloads/loras",
     "checkpoint": "./downloads/checkpoints", 
@@ -225,15 +221,21 @@ python downloader.py --redownload 1
 
 # URL指定で再ダウンロード
 python downloader.py --redownload-url "https://civitai.com/models/649516"
+
+# 全件再ダウンロード（引数なし）
+python downloader.py --redownload-url
+
+# インデックスを --redownload-url に指定（ショートカット）
+python downloader.py --redownload-url 3
 ```
 
 ## ダウンロード履歴
 
-ダウンロードに成功すると、自動的に`download_history.csv`（設定で変更可能）に記録されます：
+ダウンロードに成功すると、自動的に`download_history.csv`（設定で変更可能）に記録されます（10列フォーマット）：
 
 ```csv
-timestamp,model_type,url,filename,model_id,version_id,file_size
-2025-01-15 14:30:22,lora,https://civitai.com/models/649516?modelVersionId=726676,model.safetensors,649516,726676,143.25 MB
+timestamp,model_type,api_model_type,lora_subcategory,url,filename,model_id,version_id,file_size,file_size_bytes
+2025-01-15 14:30:22,lora,LORA,character,https://civitai.com/models/649516?modelVersionId=726676,model.safetensors,649516,726676,143.25 MB,150220800
 ```
 
 履歴は以下のコマンドで確認・操作できます：
@@ -331,9 +333,9 @@ civitai_downloader/
 
 #### 4. 設定・ログシステム
 - ✅ **設定管理**: JSON形式の設定ファイル
-- ✅ **実行ログ**: タイムスタンプ付きログファイル自動生成（logs/）
+- ✅ **実行ログ**: タイムスタンプ付きログファイル自動生成（logs/）※主にスキャナー
 - ✅ **ログレベル制御**: ファイル（全ログ）/コンソール（WARNING以上）
-- ✅ **APIキー管理**: 環境変数での安全な管理
+- ✅ **APIキー管理**: config.jsonで管理（環境変数は未対応）
 
 #### 5. データ変換ツール
 - ✅ **JSON→CSV変換**: 重複チェック付き変換・追記機能
@@ -440,4 +442,3 @@ timestamp,model_type,api_model_type,lora_subcategory,url,filename,model_id,versi
 - 大容量ファイルのダウンロードには時間がかかります
 - ネットワーク接続が安定している環境で使用してください
 - Civitai APIのレート制限（1分間に60リクエスト）に注意してください
-
