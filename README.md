@@ -305,7 +305,8 @@ civitai_downloader/
 
 ## ライセンス
 
-このスクリプトはComfyUI-Lora-Managerの実装を参考に開発されました。
+- 本プロジェクトは MIT License の下で配布されています。`LICENSE` ファイルを参照してください。
+- ComfyUI-Lora-Manager (GPL-3.0) の設計アイデアを参考にしつつ、コードは独自に実装しています。
 
 ## 現状の実装状況
 

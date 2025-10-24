@@ -19,6 +19,13 @@ from config_manager import ConfigManager
 from download_history import DownloadHistoryManager
 
 
+# レート制限対策用の定数
+SLEEP_BETWEEN_DOWNLOADS = 5  # ダウンロード間の待機時間（秒）
+RETRY_DELAYS = [60, 180, 300]  # リトライ時の待機時間（秒）: 1分, 3分, 5分
+SPEED_THRESHOLD = 10 * 1024  # 低速度閾値（10KB/s）
+SLOW_DURATION_THRESHOLD = 30  # 低速継続時間閾値（秒）
+
+
 class CivitaiDownloader:
     """Civitaiからモデルをダウンロードするクラス"""
     
@@ -248,6 +255,10 @@ class CivitaiDownloader:
                     return False, "アクセス拒否: Early Accessモデルの可能性があります"
                 elif response.status == 404:
                     return False, "ファイルが見つかりません"
+                elif response.status == 429:
+                    return False, "速度制限検出: レート制限（HTTP 429）"
+                elif response.status == 503:
+                    return False, "速度制限検出: サービス一時停止（HTTP 503）"
                 elif response.status not in (200, 206):
                     return False, f"ダウンロード失敗 (Status: {response.status})"
                 
@@ -264,24 +275,36 @@ class CivitaiDownloader:
                 downloaded = resume_offset
                 start_time = time.time()
                 last_print_time = start_time
-                
+                slow_speed_start_time = None  # 低速度検出用
+
                 print(f"📥 ダウンロード開始: {os.path.basename(save_path)}")
                 print(f"📦 サイズ: {self._format_size(total_size)}")
-                
+
                 with open(part_path, mode) as f:
                     async for chunk in response.content.iter_chunked(self.chunk_size):
                         if chunk:
                             f.write(chunk)
                             downloaded += len(chunk)
-                            
+
                             # 進捗表示（1秒ごと）
                             current_time = time.time()
                             if current_time - last_print_time >= 1.0:
                                 elapsed = current_time - start_time
                                 speed = (downloaded - resume_offset) / elapsed if elapsed > 0 else 0
                                 percent = (downloaded / total_size * 100) if total_size > 0 else 0
-                                
+
                                 print(f"⏳ {percent:.1f}% | {self._format_size(downloaded)}/{self._format_size(total_size)} | {self._format_size(speed)}/s", end='\r')
+
+                                # 速度制限検出（10KB/s以下が30秒継続）
+                                if speed < SPEED_THRESHOLD:
+                                    if slow_speed_start_time is None:
+                                        slow_speed_start_time = current_time
+                                    elif current_time - slow_speed_start_time > SLOW_DURATION_THRESHOLD:
+                                        print()  # 改行
+                                        return False, "速度制限検出: ダウンロード速度が極端に低下しました"
+                                else:
+                                    slow_speed_start_time = None
+
                                 last_print_time = current_time
                 
                 # 完了したら.partを削除してリネーム
@@ -422,8 +445,8 @@ class CivitaiDownloader:
 
 async def redownload_all(downloads: List[Dict], config: ConfigManager, force: bool = False):
     """
-    全件再ダウンロードを実行
-    
+    全件再ダウンロードを実行（レート制限対策込み）
+
     Args:
         downloads: ダウンロード履歴のリスト
         config: 設定マネージャー
@@ -432,57 +455,110 @@ async def redownload_all(downloads: List[Dict], config: ConfigManager, force: bo
     total = len(downloads)
     success_count = 0
     error_count = 0
-    
+    skip_count = 0
+    retry_stats = {'total_retries': 0, 'successful_retries': 0}
+    overall_start_time = time.time()
+
     print(f"\n🚀 全件ダウンロード開始: {total}件")
+    print(f"📊 優先順位: Checkpoint → LoRA → Embedding")
+    print(f"⏱️  ダウンロード間隔: {SLEEP_BETWEEN_DOWNLOADS}秒")
     print(f"{'='*60}")
-    
+
     async with CivitaiDownloader(config) as downloader:
         for i, download in enumerate(downloads, 1):
             url = download.get('url')
             model_type = download.get('model_type')
             filename = download.get('filename')
-            
+
             print(f"\n📥 [{i}/{total}] {filename}")
             print(f"🔗 URL: {url}")
             print(f"📂 Type: {model_type}")
             print(f"{'-'*40}")
-            
-            try:
-                # ファイル存在チェック（forceがFalseの場合のみ）
-                if not force:
-                    # ダウンロード先パスを取得
-                    try:
-                        download_path = config.get_download_path(model_type)
-                        file_path = os.path.join(download_path, filename)
 
-                        # ファイルが既に存在する場合はスキップ
-                        if os.path.exists(file_path):
-                            print(f"⚠️  スキップ: ファイルが既に存在")
-                            continue
-                    except (ValueError, AttributeError):
-                        pass
-                
-                # ダウンロード実行
-                success, error, download_info = await downloader.download_model(url, model_type)
-                
-                if success:
-                    print(f"✅ 成功: {filename}")
-                    success_count += 1
-                else:
-                    print(f"❌ 失敗: {error}")
+            # ファイル存在チェック（forceがFalseの場合のみ）
+            if not force:
+                try:
+                    download_path = config.get_download_path(model_type)
+                    file_path = os.path.join(download_path, filename)
+
+                    if os.path.exists(file_path):
+                        print(f"⚠️  スキップ: ファイルが既に存在")
+                        skip_count += 1
+                        continue
+                except (ValueError, AttributeError):
+                    pass
+
+            # リトライロジック
+            retry_count = 0
+            success = False
+            final_error = None
+
+            while retry_count <= len(RETRY_DELAYS) and not success:
+                try:
+                    # ダウンロード実行
+                    success, error, _ = await downloader.download_model(url, model_type)
+
+                    if success:
+                        print(f"✅ 成功: {filename}")
+                        success_count += 1
+
+                        if retry_count > 0:
+                            retry_stats['successful_retries'] += 1
+
+                        # 次のダウンロード前に待機
+                        if i < total:
+                            print(f"⏳ {SLEEP_BETWEEN_DOWNLOADS}秒待機中...")
+                            await asyncio.sleep(SLEEP_BETWEEN_DOWNLOADS)
+                        break
+
+                    # エラー処理
+                    final_error = error
+
+                    # 速度制限検出
+                    if "速度制限" in error or "429" in error or "503" in error:
+                        if retry_count < len(RETRY_DELAYS):
+                            delay = RETRY_DELAYS[retry_count]
+                            print(f"⚠️  速度制限検出: {delay}秒待機してリトライ（{retry_count + 1}/{len(RETRY_DELAYS)}回目）")
+                            await asyncio.sleep(delay)
+                            retry_count += 1
+                            retry_stats['total_retries'] += 1
+                        else:
+                            print(f"❌ リトライ上限到達: {filename}")
+                            error_count += 1
+                            break
+                    else:
+                        # 速度制限以外のエラーは即座に失敗
+                        print(f"❌ 失敗: {error}")
+                        error_count += 1
+                        break
+
+                except Exception as e:
+                    print(f"❌ エラー: {str(e)}")
                     error_count += 1
-                    
-            except Exception as e:
-                print(f"❌ エラー: {str(e)}")
-                error_count += 1
-    
+                    break
+
     # 結果サマリー
+    overall_elapsed = time.time() - overall_start_time
     print(f"\n{'='*60}")
     print(f"🎉 全件ダウンロード完了!")
     print(f"{'='*60}")
     print(f"✅ 成功: {success_count}件")
+    print(f"⏭️  スキップ: {skip_count}件")
     print(f"❌ 失敗: {error_count}件")
+    print(f"🔄 リトライ: {retry_stats['total_retries']}回（成功: {retry_stats['successful_retries']}回）")
     print(f"📊 合計: {total}件")
+
+    # 成功率計算（スキップを除外）
+    processed = total - skip_count
+    if processed > 0:
+        success_rate = (success_count / processed * 100)
+        print(f"📈 成功率: {success_rate:.1f}%")
+
+    # 所要時間
+    hours = int(overall_elapsed // 3600)
+    minutes = int((overall_elapsed % 3600) // 60)
+    seconds = int(overall_elapsed % 60)
+    print(f"⏱️  所要時間: {hours}時間{minutes}分{seconds}秒")
 
 
 async def main():
@@ -637,21 +713,26 @@ async def main():
                 print(f"\n{'='*60}")
                 print(f"🔄 全件再ダウンロード")
                 print(f"{'='*60}")
-                
-                downloads = history_manager.get_all_downloads(remove_duplicates=True)
+
+                # sort_by_type=Trueで優先順位ソート
+                downloads = history_manager.get_all_downloads(
+                    remove_duplicates=True,
+                    sort_by_type=True
+                )
                 if not downloads:
                     print("❌ 履歴がありません")
                     sys.exit(1)
-                
+
                 print(f"📊 ダウンロード対象: {len(downloads)}件")
-                
+                print(f"📋 優先順位: Checkpoint → LoRA → Embedding")
+
                 # 確認
                 if not args.force and not args.yes:
                     choice = input("全件ダウンロードを実行しますか？ (y/N): ")
                     if choice.lower() != 'y':
                         print("キャンセルしました")
                         sys.exit(0)
-                
+
                 # 全件ダウンロード実行
                 await redownload_all(downloads, config, args.force)
                 sys.exit(0)

@@ -171,26 +171,37 @@ class DownloadHistoryManager:
             print(f"履歴の読み込みに失敗: {str(e)}")
             return []
     
-    def get_all_downloads(self, remove_duplicates: bool = True) -> List[Dict]:
+    def get_all_downloads(self, remove_duplicates: bool = True, sort_by_type: bool = False) -> List[Dict]:
         """
         全てのダウンロード履歴を取得
-        
+
         Args:
             remove_duplicates: 重複を除去するかどうか
-        
+            sort_by_type: モデルタイプで優先順位ソート（checkpoint → lora → embedding）
+
         Returns:
             List[Dict]: 全てのダウンロード履歴のリスト
         """
         if not os.path.exists(self.history_file):
             return []
-        
+
         try:
             with open(self.history_file, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 downloads = list(reader)
-            
+
             if remove_duplicates:
-                return self._remove_duplicates(downloads)
+                downloads = self._remove_duplicates(downloads)
+
+            # モデルタイプで優先順位ソート
+            if sort_by_type:
+                type_priority = {
+                    'checkpoint': 0,
+                    'lora': 1,
+                    'embedding': 2
+                }
+                downloads.sort(key=lambda x: type_priority.get(x.get('model_type', ''), 999))
+
             return downloads
         except Exception as e:
             print(f"履歴の読み込みに失敗: {str(e)}")
